@@ -1,45 +1,46 @@
-global.GMLua_Logmode = false;
+global.GMLua_Logmode = true;
 global.GMLua_AllowGmlScope = false;
 
-function GMLua(code, logmode = noone, allowGmlScope = noone) constructor
+function GMLua(logmode = global.GMLua_Logmode, allowGmlScope = global.GMLua_AllowGmlScope,filepath = "") constructor
 {
-	if(logmode == noone)
-	{
-		logmode = global.GMLua_Logmode;	
-	}
-	if(allowGmlScope == noone)
-	{
-		allowGmlScope = global.GMLua_AllowGmlScope;
-	}
+	self.logmode = logmode;
 	self.allowGmlScope = allowGmlScope;
+	self.filepath = filepath;
 	
-	var lexer = new Lexer(code);
-	var lexedTokens = lexer.lex();
-	delete lexer;
+	lexAndParse = function(code)
+	{
+		var folderPath = filename_path(filepath);
+		var fileName = filename_name(filepath);
+	
+		var lexedTokens = global.lexer.lex(code);
+		if(logmode)
+		{
+			var f = file_text_open_write(folderPath+"LexerLog_"+ fileName+".txt");
+			file_text_write_string(f,string_replace_all(string(lexedTokens),"},","}\n"));
+			file_text_close(f);
+		}
+	
+		var abstractTree = global.parser.parseChunk(lexedTokens);
+
+		if(logmode)
+		{
+			var f = file_text_open_write(folderPath+"ParserLog_"+ fileName+".txt");
+			file_text_write_string(f,string_replace_all(string(abstractTree),"},","}\n\n"));
+			file_text_close(f);
+		}
+	}
+	/*
+	interpreter = Interpreter(abstractTree);
 	if(logmode)
 	{
-		var f = file_text_open_write("LexerLog.txt");
-		file_text_write_string(f,string_replace_all(string(lexedTokens),"},","}\n"));
+		var f = file_text_open_write(folderPath + "InterpreterLog.txt");
+		file_text_write_string(f,string_replace_all(string(interpreter.globalScope),"},","}\n\n"));
 		file_text_close(f);
-	}
-	
-	var parser = new Parser(lexedTokens);
-	lexedTokens = 0;
-	var abstractTree = parser.parseChunk();
-	delete parser;
-	if(logmode)
-	{
-		var f = file_text_open_write("ParserLog.txt");
-		file_text_write_string(f,string_replace_all(string(abstractTree),"},","}\n\n"));
-		file_text_close(f);
-	}
-	
-	
-	
+	}*/
 	
 }
 
-function createLuaFromFile(filePath,logmode = noone, allowGmlScope = noone)
+function createLuaFromFile(filePath,logmode, allowGmlScope)
 {
 	var file = file_text_open_read(filePath);
 	var code = "";
@@ -48,7 +49,9 @@ function createLuaFromFile(filePath,logmode = noone, allowGmlScope = noone)
 		code += file_text_readln(file);
 	}
 	file_text_close(file);
-	return new GMLua(code,logmode,allowGmlScope);
+	var gmlua =  new GMLua(logmode,allowGmlScope,filePath);
+	gmlua.lexAndParse(code);
+	return gmlua;
 }
 
 function createLuaFromString(str,logmode = noone, allowGmlScope = noone)

@@ -92,8 +92,9 @@ function ASTIf(conditions, blocks) constructor
 	statementType = Statement.IF;
 }
 
-function ASTNumericFor(inital,limit,step,block) constructor
+function ASTNumericFor(initalName,inital,limit,step,block) constructor
 {
+	self.initalName = initalName;
 	self.inital = inital;
 	self.limit = limit;
 	self.step = step;

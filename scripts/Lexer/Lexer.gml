@@ -1,9 +1,8 @@
 // Script assets have changed for v2.3.0 see
 // https://help.yoyogames.com/hc/en-us/articles/360005277377 for more information
 
-function Lexer(code) constructor
+function Lexer() constructor
 {
-	self.chars = new charStream(code);
 	keywords = ds_map_create();
 	keywords[?"and"] = true;
 	keywords[?"break"] = true;
@@ -28,8 +27,9 @@ function Lexer(code) constructor
 	keywords[?"until"] = true;
 	keywords[?"while"] = true;
 		
-	lex = function()
+	lex = function(code)
 	{
+		self.chars = new charStream(code);
 		var tokens = [];
 		
 		var isShortComment = false;
@@ -85,7 +85,6 @@ function Lexer(code) constructor
 			//break;
 			array_push(tokens,lexToken());
 		}
-		ds_map_destroy(keywords);
 		return tokens;
 	}
 	
@@ -421,3 +420,4 @@ function charStream(input) constructor
 	}
 }
 
+global.lexer = new Lexer();

@@ -1,8 +1,7 @@
 // Script assets have changed for v2.3.0 see
 // https://help.yoyogames.com/hc/en-us/articles/360005277377 for more information
-function Parser(tokens) constructor
+function Parser() constructor
 {
-	self.tokens = new TokenStream(tokens);
 	operatorPrecedence = [];
 	operatorPrecedence[11] = ["^"];
 	operatorPrecedence[10] = ["not","#","-","~"];
@@ -17,14 +16,17 @@ function Parser(tokens) constructor
 	operatorPrecedence[1] = ["and"];
 	operatorPrecedence[0] = ["or"];
 			
-	parseChunk = function()
+	parseChunk = function(tokens)
 	{
+		self.tokens = new TokenStream(tokens);
+		self.goto = {};
 		var chunk = new ASTChunk(parseBlock());
 		return chunk;
 	}
-	parseBlock = function()
+	parseBlock = function(canAcceptBreak = false)
 	{
 		var statements = [];
+		var gotoIndices = {};
 		while(!peek(["end","until","elseif","else"]) && tokens.has(0))
 		{
 			var newAST = undefined;
@@ -60,6 +62,7 @@ function Parser(tokens) constructor
 			else if(peek("break"))
 			{
 				newAST = parseBreakStatement();
+				hasBreak = true;
 			}
 			else if(peek("goto"))
 			{
@@ -101,6 +104,18 @@ function Parser(tokens) constructor
 			{
 				show_debug_message(statements);
 				ParserException(string(tokens.get(0)) + "is not a start of a statement",tokens.get(0).line)
+			}
+			if(newAST.astType == AST.STATEMENT && newAST.statementType == Statement.GOTO)
+			{
+				var labelName = newAST.name;
+				if(variable_struct_exists(gotoIndices,labelName))
+				{
+					variable_struct_set(gotoIndices,labelName,array_length(statements));
+				}
+				else
+				{
+					ParserException("Duplicate label name: " + labelName,tokens.get(-1).line)
+				}
 			}
 			array_push(statements,newAST);
 			while(match(";"))
@@ -249,6 +264,7 @@ function Parser(tokens) constructor
 		}
 		if(match("="))
 		{
+			var initalName = tokens.get(-1).literal;
 			var inital = parseExpression();
 			if(!match(","))
 			{
@@ -261,7 +277,7 @@ function Parser(tokens) constructor
 				step = parseExpression();
 			}
 			var block = helpParseDoStatement();
-			return new ASTNumericFor(inital,limit,step,block);
+			return new ASTNumericFor(initalName,inital,limit,step,block);
 		}
 		else
 		{
@@ -407,7 +423,7 @@ function Parser(tokens) constructor
 			{
 				ParserException("Missing identifier for local function declaration",tokens.get(-1).line);	
 			}
-			var name = tokens.get(0).literal;
+			var name = new ASTAccess(tokens.get(0).literal);
 			tokens.advance();
 			var body = parseFunctionBody();	
 			return new ASTDeclaration(name,noone,body,true);
@@ -1029,3 +1045,4 @@ function TokenStream(tokens) constructor
 		}
 	};
 }
+global.parser = new Parser();

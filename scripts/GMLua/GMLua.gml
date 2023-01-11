@@ -1,10 +1,8 @@
 global.GMLua_Logmode = true;
-global.GMLua_AllowGmlScope = false;
 
-function GMLua(logmode = global.GMLua_Logmode, allowGmlScope = global.GMLua_AllowGmlScope,filepath = "") constructor
+function GMLua(logmode = global.GMLua_Logmode,filepath = "") constructor
 {
 	self.logmode = logmode;
-	self.allowGmlScope = allowGmlScope;
 	self.filepath = filepath;
 	
 	lexAndParse = function(code)
@@ -25,7 +23,7 @@ function GMLua(logmode = global.GMLua_Logmode, allowGmlScope = global.GMLua_Allo
 		if(logmode)
 		{
 			var f = file_text_open_write(folderPath+"ParserLog_"+ fileName+".txt");
-			file_text_write_string(f,string_replace_all(string(abstractTree),"},","}\n\n"));
+			file_text_write_string(f,global.parser.logString);
 			file_text_close(f);
 		}
 	}
@@ -40,7 +38,7 @@ function GMLua(logmode = global.GMLua_Logmode, allowGmlScope = global.GMLua_Allo
 	
 }
 
-function createLuaFromFile(filePath,logmode, allowGmlScope)
+function createLuaFromFile(filePath,logmode)
 {
 	var file = file_text_open_read(filePath);
 	var code = "";
@@ -49,12 +47,12 @@ function createLuaFromFile(filePath,logmode, allowGmlScope)
 		code += file_text_readln(file);
 	}
 	file_text_close(file);
-	var gmlua =  new GMLua(logmode,allowGmlScope,filePath);
+	var gmlua =  new GMLua(logmode,filePath);
 	gmlua.lexAndParse(code);
 	return gmlua;
 }
 
-function createLuaFromString(str,logmode = noone, allowGmlScope = noone)
+function createLuaFromString(str,logmode = noone)
 {
-	return new GMLua(str,logmode,allowGmlScope);
+	return new GMLua(str,logmode);
 }

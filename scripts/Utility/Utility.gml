@@ -1,81 +1,76 @@
 // Script assets have changed for v2.3.0 see
 // https://help.yoyogames.com/hc/en-us/articles/360005277377 for more information
 
-//I cannot find a way to call a function with an unknown number of 
-//parameters.
+//This is to allow an inderect call to a function using an array of arguments
+//and a reference to the function
 function callFunction(functionRef, arguments)
 {
-	switch(array_length(arguments))
+	arr = array_create(15,undefined);
+	for(var i = 0; i < array_length(arguments); ++i)
 	{
-		case 0:
-		return functionRef();
-		break;
-		case 1:
-		return functionRef(arguments[0]);
-		break;
-		case 2:
-		return functionRef(arguments[0],arguments[1]);
-		break;
-		case 3:
-		return functionRef(arguments[0],arguments[1],arguments[2]);
-		break;
-		case 4:
-		return functionRef(arguments[0],arguments[1],arguments[2],arguments[3]);
-		break;
-		case 5:
-		return functionRef(arguments[0],arguments[1],arguments[2],arguments[3],arguments[4]);
-		break;
-		case 6:
-		return functionRef(arguments[0],arguments[1],arguments[2],arguments[3],arguments[4]
-		,arguments[5]);
-		break;
-		case 7:
-		return functionRef(arguments[0],arguments[1],arguments[2],arguments[3],arguments[4]
-		,arguments[5],arguments[6]);
-		break;
-		case 8:
-		return functionRef(arguments[0],arguments[1],arguments[2],arguments[3],arguments[4]
-		,arguments[5],arguments[6],arguments[7]);
-		break;
-		case 9:
-		return functionRef(arguments[0],arguments[1],arguments[2],arguments[3],arguments[4]
-		,arguments[5],arguments[6],arguments[7],arguments[8]);
-		break;
-		case 10:
-		return functionRef(arguments[0],arguments[1],arguments[2],arguments[3],arguments[4]
-		,arguments[5],arguments[6],arguments[7],arguments[8],arguments[9]);
-		break;
-		case 11:
-		return functionRef(arguments[0],arguments[1],arguments[2],arguments[3],arguments[4]
-		,arguments[5],arguments[6],arguments[7],arguments[8],arguments[9],arguments[10]);
-		break;
-		case 12:
-		return functionRef(arguments[0],arguments[1],arguments[2],arguments[3],arguments[4]
-		,arguments[5],arguments[6],arguments[7],arguments[8],arguments[9],arguments[10],
-		arguments[11]);
-		break;
-		case 13:
-		return functionRef(arguments[0],arguments[1],arguments[2],arguments[3],arguments[4]
-		,arguments[5],arguments[6],arguments[7],arguments[8],arguments[9],arguments[10],
-		arguments[11],arguments[12]);
-		break;
-		case 14:
-		return functionRef(arguments[0],arguments[1],arguments[2],arguments[3],arguments[4]
-		,arguments[5],arguments[6],arguments[7],arguments[8],arguments[9],arguments[10],
-		arguments[11],arguments[12],arguments[13]);
-		break;
-		case 15:
-		return functionRef(arguments[0],arguments[1],arguments[2],arguments[3],arguments[4]
-		,arguments[5],arguments[6],arguments[7],arguments[8],arguments[9],arguments[10],
-		arguments[11],arguments[12],arguments[13],arguments[14]);
-		break;
-		default:
-		InterpreterException("function call has too many arguments (This interpreter accepts 15)")
+		arr[i] = arguments[i];
 	}
+	functionRef(arr[0],arr[1],arr[2],arr[3],arr[4],arr[5],arr[6],arr[7],arr[8],arr[9],arr[10],arr[11],arr[12],arr[13],arr[14]);
 }
 
-function Pointer() constructor
+function Reference(container,key = undefined, checkExistance = true) constructor
 {
-	
+	self.container = container;
+	self.key = key;
+	if(key == undefined)
+	{
+		getValue = function()
+		{
+			return container;
+		}
+		setValue = funtion(newVal)
+		{
+			throw("Attempted to set the value of a reference that does not have a key");	
+		}
+		return;
+	}
+	if(checkExistance)
+	{
+		var errMsg = "Reference attempts to index a non-existant key";
+		switch(typeof(container))
+		{
+			case "struct":
+				if(!variable_struct_exists(container,key))
+				{
+					throw(errMsg)
+				}
+			break
+			case "ref":
+				if(!variable_instance_exists(container,key))
+				{
+					throw(errMsg)
+				}
+			break
+		}
+	}
+	getValue = function()
+	{
+		switch(typeof(container))
+		{
+			case "struct":
+				variable_struct_get(container,key);
+			break
+			case "ref":
+				variable_instance_get(container,key);
+			break
+		}
+	}
+	setValue = function(newVal)
+	{
+		switch(typeof(container))
+		{
+			case "struct":
+				variable_struct_set(container,key,newVal);
+			break
+			case "ref":
+				variable_instance_set(container,key,newVal);
+			break
+		}
+	}	
 }
 

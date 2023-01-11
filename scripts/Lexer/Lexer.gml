@@ -4,7 +4,7 @@
 function Lexer() constructor
 {
 	keywords = ds_map_create();
-	keywords[?"and"] = true;
+	//keywords[?"and"] = true;
 	keywords[?"break"] = true;
 	keywords[?"do"] = true;
 	keywords[?"else"] = true;
@@ -18,8 +18,8 @@ function Lexer() constructor
 	keywords[?"in"] = true;
 	keywords[?"local"] = true;
 	keywords[?"nil"] = true;
-	keywords[?"not"] = true;
-	keywords[?"or"] = true;
+	//keywords[?"not"] = true;
+	//keywords[?"or"] = true;
 	keywords[?"repeat"] = true;
 	keywords[?"return"] = true;
 	keywords[?"then"] = true;

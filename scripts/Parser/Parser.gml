@@ -15,20 +15,24 @@ function Parser() constructor
 	operatorPrecedence[2] = ["<",">","<=",">=","~=","=="];
 	operatorPrecedence[1] = ["and"];
 	operatorPrecedence[0] = ["or"];
-			
+	scopeDepth = 0;
+	logString = "";
 	parseChunk = function(tokens)
 	{
+		logString = "";
 		self.tokens = new TokenStream(tokens);
 		self.goto = {};
 		var chunk = new ASTChunk(parseBlock());
+		scopeDepth = 0;
 		return chunk;
 	}
-	parseBlock = function(canAcceptBreak = false)
+	parseBlock = function()
 	{
 		var statements = [];
 		var gotoIndices = {};
 		while(!peek(["end","until","elseif","else"]) && tokens.has(0))
 		{
+			scopeDepth++;
 			var newAST = undefined;
 			var curLine = tokens.get(0).line;
 			while(match(";"))
@@ -107,8 +111,8 @@ function Parser() constructor
 			}
 			if(newAST.astType == AST.STATEMENT && newAST.statementType == Statement.GOTO)
 			{
-				var labelName = newAST.name;
-				if(variable_struct_exists(gotoIndices,labelName))
+				var labelName = newAST.labelName;
+				if(!variable_struct_exists(gotoIndices,labelName))
 				{
 					variable_struct_set(gotoIndices,labelName,array_length(statements));
 				}
@@ -117,9 +121,16 @@ function Parser() constructor
 					ParserException("Duplicate label name: " + labelName,tokens.get(-1).line)
 				}
 			}
+			for(var i = 0; i < scopeDepth; ++i)
+			{
+				logString += "    ";
+			}
+			newAST.firstLine = curLine;
+			logString += (string(newAST) + "\n")
 			array_push(statements,newAST);
 			while(match(";"))
 			{}
+			scopeDepth--;
 		}
 		return statements;
 	}
@@ -524,12 +535,12 @@ function Parser() constructor
 	
 	parseExpression = function()
 	{
-		return parseExpressionTerm(11)
+		return parseExpressionTerm(0)
 	}
 	// Level 0 is lowest priority, 11 is highest
 	parseExpressionTerm = function(level)
 	{
-		if(level < 0)
+		if(level > 11)
 		{
 			return parsePrimaryExpression();	
 		}
@@ -541,19 +552,19 @@ function Parser() constructor
 				operator= tokens.get(0).literal;
 				tokens.advance();
 			}
-			var first = parseExpressionTerm(level-1);
+			var first = parseExpressionTerm(level+1);
 			if(operator == noone)
 			{
 				return first;	
 			}
 			return new ASTUniop(operator,first);	
 		}
-		var first = parseExpressionTerm(level-1);
+		var first = parseExpressionTerm(level+1);
 		if(peek(operatorPrecedence[level]))
 		{
 			var operator = tokens.get(0).literal;
 			tokens.advance();
-			var second = parseExpressionTerm(level-1);
+			var second = parseExpressionTerm(level+1);
 			var firstSide;
 
 			firstSide = new ASTBinop(operator,first,second);
@@ -562,28 +573,28 @@ function Parser() constructor
 		}
 		return first;
 	}
-	
+	//Deals with repeats binary operations
 	helpParseExpressionTerm = function(firstSide,level)
 	{
 		if(level < 0)
 		{
 			return parsePrimaryExpression();	
 		}
+
 		if(peek(operatorPrecedence[level]))
 		{
 			var operator = tokens.get(0).literal;
 			tokens.advance();
-			var second = parseExpressionTerm(level-1);
-			var secondSide;
+			var second = parseExpressionTerm(level+1);
 			if(level == 11 || level == 7)
 			{
-				secondSide = new ASTBinop(operator,second,firstSide);
+				firstSide.second = new ASTBinop(operator,firstSide.second,second);
+				return firstSide
 			}
 			else
 			{
-				secondSide = new ASTBinop(operator,firstSide,second);
+				return new ASTBinop(operator,firstSide,second);
 			}
-			return helpParseExpressionTerm(firstSide,level);
 		}
 		return firstSide;
 	}

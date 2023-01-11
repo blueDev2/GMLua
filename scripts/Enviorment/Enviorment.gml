@@ -11,11 +11,39 @@ enum LuaTypes
 	THREAD,
 	TABLE,
 	GMFUNCTION,
-	GMOBJECT,
-	VARIABLE
+	VARIABLE,
+	REFERENCE
 }
 
-function simpleValue(val) constructor
+function valueParent() constructor
+{
+	getValue = function()
+	{
+		throw("getValue was not overloaded by child value constructor")
+	}
+	setValue = function(newVal)
+	{
+		throw("setValue was not overloaded by child value constructor")
+	}
+}
+
+//Input expressions, output expressions. Treated as a reference in the
+//Interpreter. Point at "simple" values
+//SHOULD ALWAYS BE ASSOCIATED WITH A TABLE
+function ReferenceType(container, key) : valueParent() constructor
+{
+	type = LuaTypes.REFERENCE;
+	self.ReferenceObject = new Reference(container,key);
+	getValue = function()
+	{
+		return GMLToLua(ReferenceObject.getValue());
+	}
+	setValue = function(newValue)
+	{
+		ReferenceObject.setValue(LuaToGML(newValue));
+	}
+}
+function simpleValue(val): valueParent() constructor
 {
 	self.val = val;
 	switch(typeof(val))
@@ -29,7 +57,7 @@ function simpleValue(val) constructor
 		case "bool":
 			type = LuaTypes.BOOLEAN;
 		break;
-		case "int64" || "int32":
+		case "int64":
 			type = LuaTypes.INTEGER;
 		break;
 		case "undefined":
@@ -41,87 +69,105 @@ function simpleValue(val) constructor
 	}
 }
 
-function Function(ASTFunc) constructor
+function Function(ASTFunc) : valueParent() constructor
 {
 	self.val = ASTFunc;
 	self.persistentScope = new Scope();
 	type = LuaTypes.FUNCTION;
+	getValue = function()
+	{
+		return val;
+	}
+	setValue = function(newVal)
+	{
+		val = newVal;
+	}
 }
 
-function GMFunction(funcRef) constructor
+function GMFunction(funcRef) :  valueParent() constructor
 {
 	self.val = funcRef;
 	type = LuaTypes.GMFUNCTION
-}
-
-function GMObject(obj) constructor
-{
-	self.val = obj;
-	type = LuaTypes.GMOBJECT;
-	getValue = function(name)
+	getValue = function()
 	{
-		name = name.val;
-		var checkedValue;
-		switch(typeof(val))
-		{
-			case "struct":
-				checkedValue = variable_struct_get(val,name);
-			break;
-			case "ref":
-				checkedValue = variable_instance_get(val,name);
-			break;
-		}
-		return GMLToLua(checkedValue);
+		return val;
 	}
-	setValue = function(name,newVal)
+	setValue = function(newVal)
 	{
-		name = name.val;
-		newVal = newVal.val;
-		switch(typeof(val))
-		{
-			case "struct":
-				variable_struct_set(val,name,newVal);
-			break;
-			case "ref":
-				variable_instance_set(val,name,newVal);
-			break;
-		}
+		val = newVal;
 	}
 }
 
-function Thread(func) constructor
+function Thread(func) :  valueParent() constructor
 {
 	tempScope = new Scope();
 	self.val = func;
 	type = LuaTypes.THREAD;
+	getValue = function()
+	{
+		return val;
+	}
+	setValue = function(newVal)
+	{
+		val = newVal;
+	}
 }
-
-function Table(gc) constructor
+//newAnalogousObject must be a struct or instance
+//getValue and setValue expect and return expression, 
+//so a table may act as a reference in the interpreter.
+function Table(newVal = {}, newAnalogousObject = {}) constructor
 {
-	val = ds_map_create();
+	val = newVal;
 	type = LuaTypes.TABLE;
+	analogousObject = newAnalogousObject;
+	
 	getValue = function(key)
 	{
-		if(variable_struct_exists(key,"val"))
+		key = LuaToGML(key);
+		var expression = val[?key];	
+		if(expression.type == LuaTypes.FUNCTION ||
+		expression.type == LuaTypes.THREAD || 
+		expression.type == LuaTypes.TABLE)
 		{
-			key = key.val;
+			return expression;
 		}
-		return val[?key];	
+		// Must be a "ReferenceType" expression
+		else if(expression.type = LuaTypes.REFERENCE)
+		{
+			return expression.getValue();
+		}
+		else
+		{
+			return new simpleValue(undefined);	
+		}
 	}
 	setValue = function(key,newVal)
 	{
-		if(variable_struct_exists(key,"val"))
+		key = LuaToGML(key);
+		if(newVal.type == LuaTypes.FUNCTION ||
+		newVal.type == LuaTypes.THREAD || 
+		newVal.type == LuaTypes.TABLE)
 		{
-			key = key.val;
+			val[?key] = newVal;
 		}
-		val[?key] = newVal;
+		// newVal is a "simple" expression, which will be saved using reference expression
+		else
+		{
+			var refToValue = (new Reference(analogousObject,key,false));
+			refToValue.setValue(LuaToGML(newVal));
+			val[?key] = new ReferenceType(analogousObject,key);
+		}
 	}
-	//ds maps are collected via an instance of an object 
-	//that checks if the LuaObject is collected or not and
-	//if it is collected, destroy the ds_map
-	gc.addTable(self);
 }
-//Using this on a Lua Object is not recommended
+function LuaToGML(luaItem)
+{
+	return luaItem.val;
+}
+
+//There is no difference between a number and a script function in GML
+//If trying to use a script function, pass it through 
+//method(undefined, func) first
+//As an example, "var a = 4; a();" can run sucessfully
 function GMLToLua(gmlItem)
 {
 	var type = typeof(gmlItem);
@@ -130,18 +176,18 @@ function GMLToLua(gmlItem)
 	{
 		return new simpleValue(gmlItem);	
 	}
-	else if(is_method(gmlItem) || script_exists(gmlItem))
+	else if(is_method(gmlItem))
 	{
 		return new GMFunction(gmlItem);
 	}
-	else if(type == "struct" || type == "ref")
+	else if(type == "struct")
 	{
-		return new GMObject(gmlItem);
+		return new Table({},gmlItem);
 	}
 	InterpreterException("Failed to change a GML value to lua");
 }
 
-function Variable(value = new simpleValue(undefined),attribute = noone) constructor
+function Variable(value = new simpleValue(undefined),attribute = noone): valueParent() constructor
 {
 	self.attribute = attribute;
 	self.value = value;
@@ -151,6 +197,10 @@ function Variable(value = new simpleValue(undefined),attribute = noone) construc
 	}
 	function setValue(value)
 	{
+		if(attribute == "const")
+		{
+			throw("Attempted to change a constant variable");	
+		}
 		self.value = value;
 	}
 	type = LuaTypes.VARIABLE;

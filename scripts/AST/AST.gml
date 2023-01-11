@@ -34,41 +34,48 @@ enum Expression
 	ACCESS,
 	TABLE
 }
-
+function ASTStatement() constructor
+{
+	firstLine = -1;
+	astType = AST.STATEMENT;
+}
+function ASTExpression() constructor
+{
+	astType = AST.EXPRESSION;
+}
 function ASTChunk(globals) constructor
 {
 	self.globals = globals;
 	astType = AST.CHUNK;
 }
 
-function ASTLabel(name) constructor
+function ASTLabel(name) : ASTStatement() constructor
 {
 	self.name = name;
-	astType = AST.STATEMENT;
 	statementType = Statement.LABEL;
 }
 
-function ASTBreak() constructor
+function ASTBreak(): ASTStatement() constructor
 {
 	astType = AST.STATEMENT;
 	statementType = Statement.BREAK;
 }
 
-function ASTGoto(labelName) constructor
+function ASTGoto(labelName) : ASTStatement() constructor
 {
 	self.labelName 	= labelName;
 	astType = AST.STATEMENT;
 	statementType = Statement.GOTO;
 }
 
-function ASTDo(block) constructor
+function ASTDo(block): ASTStatement() constructor
 {
 	self.block = block;
 	astType = AST.STATEMENT;
 	statementType = Statement.DO;
 }
 
-function ASTWhile(condition,block) constructor
+function ASTWhile(condition,block): ASTStatement() constructor
 {
 	self.condition = condition;
 	self.block = block;
@@ -76,7 +83,7 @@ function ASTWhile(condition,block) constructor
 	statementType = Statement.WHILE;
 }
 
-function ASTRepeat(condition,block) constructor
+function ASTRepeat(condition,block): ASTStatement() constructor
 {
 	self.condition = condition;
 	self.block = block;
@@ -84,7 +91,7 @@ function ASTRepeat(condition,block) constructor
 	statementType = Statement.REPEAT;
 }
 
-function ASTIf(conditions, blocks) constructor
+function ASTIf(conditions, blocks): ASTStatement() constructor
 {
 	self.conditions = conditions;
 	self.blocks = blocks;
@@ -92,7 +99,7 @@ function ASTIf(conditions, blocks) constructor
 	statementType = Statement.IF;
 }
 
-function ASTNumericFor(initalName,inital,limit,step,block) constructor
+function ASTNumericFor(initalName,inital,limit,step,block): ASTStatement() constructor
 {
 	self.initalName = initalName;
 	self.inital = inital;
@@ -103,7 +110,7 @@ function ASTNumericFor(initalName,inital,limit,step,block) constructor
 	statementType = Statement.NUMERICFOR;
 }
 
-function ASTGenericFor(namelist,explist,block) constructor
+function ASTGenericFor(namelist,explist,block): ASTStatement() constructor
 {
 	self.namelist = namelist;
 	self.explist = explist;
@@ -112,16 +119,16 @@ function ASTGenericFor(namelist,explist,block) constructor
 	statementType = Statement.GENERICFOR;
 }
 
-function ASTReturn(expressions) constructor
+function ASTReturn(expressions): ASTStatement() constructor
 {
 	self.expressions = expressions;	
 	astType = AST.STATEMENT;
 	statementType = Statement.RETURN;
 }
 
-function ASTDeclaration(name,attribute, expression, isLocal) constructor
+function ASTDeclaration(names,attribute, expression, isLocal): ASTStatement() constructor
 {
-	self.name = name;
+	self.names = names;
 	self.attribute = attribute;
 	self.expression = expression;
 	self.isLocal = isLocal;
@@ -129,7 +136,7 @@ function ASTDeclaration(name,attribute, expression, isLocal) constructor
 	statementType = Statement.DECLARATION;
 }
 
-function ASTAssignment(names,expressions) constructor
+function ASTAssignment(names,expressions): ASTStatement() constructor
 {
 	self.names = names;	
 	self.expressions = expressions;
@@ -138,67 +145,67 @@ function ASTAssignment(names,expressions) constructor
 }
 
 
-function ASTFunctionBody(paramlist, isVarArgs, block) constructor
+function ASTFunctionBody(paramlist, isVarArgs, block): ASTExpression() constructor
 {
 	self.paramlist = paramlist;
 	self.isVarArgs = isVarArgs;
 	self.block = block;
-	astType = AST.EXPRESSION;
+	
 	expressionType = Expression.FUNCTIONBODY;
 }
 
 // value is in GML type
-function ASTLiteral(value) constructor
+function ASTLiteral(value): ASTExpression() constructor
 {
 	self.value = value;
-	astType = AST.EXPRESSION;
+	
 	expressionType = Expression.LITERAL;
 }
 
-function ASTBinop(operator,first,second) constructor
+function ASTBinop(operator,first,second): ASTExpression()  constructor
 {
 	self.first = first;
 	self.second = second;
 	self.operator = operator;
-	astType = AST.EXPRESSION;
+	
 	expressionType = Expression.BINOP;
 }
 
-function ASTUniop(operator,first) constructor
+function ASTUniop(operator,first): ASTExpression()  constructor
 {
 	self.first = first;
 	self.operator = operator;
-	astType = AST.EXPRESSION;
+	
 	expressionType = Expression.UNIOP;
 }
 
-function ASTGroup(group) constructor
+function ASTGroup(group): ASTExpression()  constructor
 {
 	self.group = group;
-	astType = AST.EXPRESSION;
+	
 	expressionType = Expression.GROUP;
 }
 
-function ASTAccess(name,expression = noone) constructor
+function ASTAccess(name,expression = noone): ASTExpression()  constructor
 {
 	self.name = name;
 	self.expression = expression;
-	astType = AST.EXPRESSION;
+	
 	expressionType = Expression.ACCESS;
 }
 
-function ASTFunctionCall(name,args) constructor
+function ASTFunctionCall(name,args): ASTExpression()  constructor
 {
 	self.name = name;	
 	self.args = args;
-	astType = AST.EXPRESSION;
+	
 	expressionType = Expression.FUNCTIONCALL;
 }
 
-function ASTTable(keys,values) constructor
+function ASTTable(keys,values): ASTExpression()  constructor
 {
 	self.keys = keys;
 	self.value = values;
-	astType = AST.EXPRESSION;
+	
 	expressionType = Expression.TABLE;	
 }

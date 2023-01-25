@@ -1,7 +1,7 @@
 {
   "resourceType": "GMScript",
   "resourceVersion": "1.0",
-  "name": "AST",
+  "name": "Metatables",
   "isDnD": false,
   "isCompatibility": false,
   "parent": {

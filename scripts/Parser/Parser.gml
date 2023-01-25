@@ -1,5 +1,8 @@
 // Script assets have changed for v2.3.0 see
 // https://help.yoyogames.com/hc/en-us/articles/360005277377 for more information
+
+//This is a singleton as only one Parser is needed at any time
+//When another tokenList must be parsed, a function is provided to do so
 function Parser() constructor
 {
 	operatorPrecedence = [];
@@ -22,17 +25,19 @@ function Parser() constructor
 		logString = "";
 		self.tokens = new TokenStream(tokens);
 		self.goto = {};
-		var chunk = new ASTChunk(parseBlock());
+		var chunk = parseBlock();
 		scopeDepth = 0;
+		logString = createLog(0,chunk)
+		//logString = string(chunk)
 		return chunk;
 	}
 	parseBlock = function()
 	{
 		var statements = [];
 		var gotoIndices = {};
+		//scopeDepth++;
 		while(!peek(["end","until","elseif","else"]) && tokens.has(0))
 		{
-			scopeDepth++;
 			var newAST = undefined;
 			var curLine = tokens.get(0).line;
 			while(match(";"))
@@ -55,6 +60,7 @@ function Parser() constructor
 						ParserException("Assignment missing \"=\"",tokens.get(-1).line);
 					}
 					var expList = parseExpressionList();
+					
 					newAST = new ASTAssignment(varList,expList);
 				}
 
@@ -121,18 +127,20 @@ function Parser() constructor
 					ParserException("Duplicate label name: " + labelName,tokens.get(-1).line)
 				}
 			}
-			for(var i = 0; i < scopeDepth; ++i)
-			{
-				logString += "    ";
-			}
+			
 			newAST.firstLine = curLine;
-			logString += (string(newAST) + "\n")
 			array_push(statements,newAST);
 			while(match(";"))
 			{}
-			scopeDepth--;
 		}
-		return statements;
+		var newBlock = new ASTBlock(statements);
+		newBlock.firstLine = -1;
+		if(array_length(statements) > 0)
+		{
+			newBlock.firstLine = statements[0].firstLine;
+			newBlock.lastLine = statements[array_length(statements) - 1].firstLine;
+		}
+		return newBlock
 	}
 	
 	parseLabel = function()
@@ -365,14 +373,14 @@ function Parser() constructor
 			name = cur;
 		}
 		
-		var body;
+		var body = [];
 		if(isMethod)
 		{
-			body = parseFunctionBody(["self"]);
+			array_push(body, parseFunctionBody(["self"]));
 		}
 		else
 		{
-			body = parseFunctionBody();	
+			array_push(body , parseFunctionBody());	
 		}
 		return new ASTDeclaration(name,noone,body,false);
 	}
@@ -434,9 +442,11 @@ function Parser() constructor
 			{
 				ParserException("Missing identifier for local function declaration",tokens.get(-1).line);	
 			}
-			var name = new ASTAccess(tokens.get(0).literal);
+			var name = [];
+			array_push(name,new ASTAccess(tokens.get(0).literal));
 			tokens.advance();
-			var body = parseFunctionBody();	
+			var body = [];
+			array_push(body,parseFunctionBody());	
 			return new ASTDeclaration(name,noone,body,true);
 		}
 		else
@@ -1029,6 +1039,131 @@ function Parser() constructor
 		}
 		return false;
 	}
+	createLog = function(level,block)
+		{
+			var appendString = "\n";
+			var ws = "";
+			for(var i = 0; i < level; ++i)
+			{
+				ws += "    ";
+			}
+			if(array_length(block.statements) == 0)
+			{
+				return "";	
+			}
+			for(var i = 0; i < array_length(block.statements);++i)
+			{
+				var curStatement = block.statements[i];
+				//show_debug_message(curStatement)
+				if(curStatement.astType == AST.EXPRESSION &&
+				curStatement.expressionType == Expression.FUNCTIONCALL)
+				{
+					appendString += ws + "function call: " + string(curStatement) + "\n";
+					continue;
+				}
+				switch(curStatement.statementType)
+				{
+					
+					case Statement.ASSIGNMENT:
+						appendString += ws + "names: " + string(curStatement.names) + "\n";
+						appendString += ws + "assignedExpressions: [";
+						for(var j = 0; j < array_length(curStatement.expressions);++j)
+						{
+							var curExpression = curStatement.expressions[j];
+							show_debug_message(curExpression.expressionType == Expression.FUNCTIONBODY)
+							if(curExpression.expressionType == Expression.FUNCTIONBODY)
+							{
+								appendString += ws + "paramlist: "+ string(curExpression.paramlist) + ", "+
+								"isVarArgs: " + string(curExpression.isVarArgs);
+								appendString += self.createLog(level+1,curExpression.block)
+							}
+							else
+							{
+								appendString += ws + string(curExpression);
+							}
+							
+							if(j != array_length(curStatement.expressions) - 1)
+							{
+								appendString += ", ";
+							}
+						}
+						appendString += "]\n";
+						
+					break;
+					case Statement.DECLARATION:
+						appendString += ws + "names: " + string(curStatement.names) + ", ";
+						appendString += "attributes: " + string(curStatement.attributes) + ", ";
+						appendString += "isLocal: "  + string(curStatement.isLocal) + "\n";
+						appendString += ws + "assignedExpressions: [";
+						for(var j = 0; j < array_length(curStatement.expressions);++j)
+						{
+							var curExpression = curStatement.expressions[j];
+							show_debug_message(curExpression.expressionType == Expression.FUNCTIONBODY)
+							if(curExpression.expressionType == Expression.FUNCTIONBODY)
+							{
+								appendString += ws + "paramlist: "+ string(curExpression.paramlist) + 
+								", isVarArgs: " + string(curExpression.isVarArgs);
+								appendString += ws + self.createLog(level+1,curExpression.block)
+							}
+							else
+							{
+								appendString += ws + string(curExpression);
+							}
+							
+							if(j != array_length(curStatement.expressions) - 1)
+							{
+								appendString += ", ";
+							}
+						}
+						appendString += "]\n";
+					break;
+					case Statement.DO:
+						appendString += self.createLog(level +1, curStatement.block)
+					break;
+					case Statement.GENERICFOR:
+						appendString += ws + "namelist :" + string(namelist);
+						appendString += " ,"
+						appendString += ws + "explist :" string(explist);
+						appendString += self.createLog(level +1, curStatement.block)
+					break;
+					case Statement.IF:
+						var conditions = curStatement.conditions
+						var blocks = curStatement.blocks;
+						for(var j = 0; j < array_length(conditions); ++j)
+						{
+							appendString += "\n" + ws + "condition" + string(j) + " :" + string(conditions[j]);
+							appendString += self.createLog(level +1, blocks[j])
+						}
+						if(array_length(blocks) > array_length(conditions))
+						{
+							appendString += self.createLog(level +1, blocks[array_length(blocks)-1])
+						}
+					break;
+					case Statement.NUMERICFOR:
+						appendString += ws + "initalName :" + curStatement.initalName;
+						appendString += " ,"
+						appendString += "inital :" +curStatement.inital;
+						appendString += " ,"
+						appendString += "limit :" + curStatement.limit;
+						appendString += " ,"
+						appendString += "step :" + curStatement.step;
+						appendString += self.createLog(level +1, curStatement.block)
+					break;
+					case Statement.REPEAT:
+						appendString += ws + "condition :" + string(curStatement.condition);
+						appendString += self.createLog(level +1, curStatement.block)
+					break;
+					case Statement.WHILE:
+						appendString += ws + "condition :" + string(curStatement.condition);
+						appendString += self.createLog(level +1, curStatement.block)
+					break;
+					default:
+						appendString += ws + string(curStatement) + "\n"
+					break
+				}
+			}
+			return appendString;
+		}
 	
 }
 

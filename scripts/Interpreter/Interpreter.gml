@@ -1,13 +1,13 @@
 // Script assets have changed for v2.3.0 see
 // https://help.yoyogames.com/hc/en-us/articles/360005277377 for more information
-function Interpreter(chunk) constructor
+function Interpreter() constructor
 {
 	//Variables that are always available
 	globalScope = new Scope(noone);
 	//Variables that are currently available
 	currentScope = new Scope(globalScope);
 	//globalScope.getVariable("_ENV")
-	visitChunk = function()
+	visitChunk = function(chunk,scopes)
 	{
 		for(var i = 0; i < array_length(chunk.globals); ++i)
 		{
@@ -28,9 +28,10 @@ function Interpreter(chunk) constructor
 	}
 	helpVisitBlock = function(block)
 	{
-		for(var i = 0; i < array_length(block); ++i)
+		var statements = block.statements;
+		for(var i = 0; i < array_length(statements); ++i)
 		{
-			visitStatement(block[i]);	
+			visitStatement(statements[i]);	
 		}
 	}
 	visitExpression = function(visitor)
@@ -148,7 +149,7 @@ function Interpreter(chunk) constructor
 	//Just do nothing
 	visitLabel = function(visitor)
 	{
-		return;
+		
 	}
 	visitRepeat = function(visitor)
 	{
@@ -199,6 +200,14 @@ function Interpreter(chunk) constructor
 				tableRef.setValue(key,newVal);
 			}
 		}
+		//If indexing the table at a particuar key returns NIL,
+		//Peform a metamethod call for __index.
+		if(customReference.getValue().val == undefined)
+		{
+			var newExp = callMetamethod("[]",curNameExpression,curExpExpression);
+			//This new expression can be Nil
+			return new Reference(newExp);
+		}
 		return customReference;
 	}
 	
@@ -248,59 +257,258 @@ function Interpreter(chunk) constructor
 	
 	//Any expression with an operator will call this
 	//Must return an expression
+	//May call a metamethod (which also must return an expression)
 	helpVisitOp = function(op, exp1, exp2 = noone)
 	{
-		if(exp1.type == LuaTypes.TABLE || 
-		(exp2 != noone && exp2.type == LuaTypes.TABLE))
+		var isBinary = (exp2 != noone);
+		if(exp2 == noone)
 		{
-			return callMetamethod(op,exp1,exp2);
+			exp2 = exp1;	
+		}
+		var exp1Val = exp1.val;
+		var exp2Val = exp2.val;
+		static ArithmetricExecute = function(exp1, exp2, case1Function, case2Function = noone)
+		{
+			if(case2Function == noone)
+			{
+				case2Function = case1Function;	
+			}
+			var exp1Val = exp1.val;
+			var exp2Val = exp2.val;
+			var isExp1Int = (exp1.type == LuaTypes.INTEGER);
+			var isExp2Int = (exp2.type == LuaTypes.INTEGER);
+			if(isExp1Int && isExp2Int)
+			{
+				return new simpleValue(case1Function(exp1Val, exp2Val));
+			}
+			var isExp1Num = isExp1Int || (exp1.type == LuaTypes.FLOAT);
+			var isExp2Num = isExp2Int || (exp2.type == LuaTypes.FLOAT);
+			if(isExp1Num && isExp2Num)
+			{
+				return new simpleValue(case2Function(exp1Val, exp2Val));
+			}	
+			return noone;
+		}
+		static BitwiseExecute = function(exp1, exp2, func)
+		{
+			var exp1Val = exp1.val;
+			var exp2Val = exp2.val;
+			if(exp1.type == LuaTypes.INTEGER)
+			{}
+			else if(exp1.type == LuaTypes.FLOAT)
+			{
+				if(frac(exp1Val) == 0)
+				{
+					exp1Val = int64(exp1Val);
+				}
+				else
+				{
+					return noone;
+				}
+			}
+			else
+			{
+				return noone
+			}
+			
+			if(exp2.type == LuaTypes.INTEGER)
+			{}
+			else if(exp2.type == LuaTypes.FLOAT)
+			{
+				if(frac(exp2Val) == 0)
+				{
+					exp2Val = int64(exp2Val);
+				}
+				else
+				{
+					return noone;
+				}
+			}
+			else
+			{
+				return noone
+			}
+			return simpleValue(func(exp1Val, exp2Val));
 		}
 		switch(op)
 		{
 			//Arithmetic Operators
 			case "+":
-			
+				var addIntegers = function(val1, val2)
+				{
+					return val1+val2;
+				}
+				var addNumbers = function(val1, val2)
+				{
+					return real(val1)+real(val2);
+				}
+				var retExp = ArithmetricExecute(exp1, exp2, addIntegers, addNumbers);
+				if(retExp != noone)
+				{
+					return retExp;
+				}
+				else
+				{
+					return callMetamethod(op, exp1, exp2);
+				}
 			break;
 			case "-":
+				var retExp = noone;
 				//Can be uniary or binary
+				if(isBinary)
+				{
+					var subtractIntegers = function(val1, val2)
+					{
+						return val1-val2;
+					}
+					var subtractNumbers = function(val1, val2)
+					{
+						return real(val1) - real(val2);
+					}
+					retExp = ArithmetricExecute(exp1, exp2,subtractIntegers,subtractNumbers);
+				}
+				else
+				{
+					var negateNumber = function(val1, val2)
+					{
+						return -1 * val1;
+					}
+					retExp = ArithmetricExecute( exp1, exp2, negateNumber);
+				}
+				if(retExp != noone)
+				{
+					return retExp;
+				}
+				else
+				{
+					return callMetamethod(op, exp1, exp2)	
+				}
 			break;
 			case "*":
-			
+				var multiplyIntegers = function(val1, val2)
+				{
+					return val1*val2;
+				}
+				var multiplyNumbers = function(val1,val2)
+				{
+					return real(val1)*real(val2)
+				}
+				var retExp = ArithmetricExecute(exp1, exp2,multiplyIntegers, multiplyNumbers);
+				if(retExp != noone)
+				{
+					return retExp;
+				}
+				else
+				{
+					return callMetamethod(op, exp1, exp2)	
+				}
 			break;
 			case "/":
-			
+				var retExp = noone;
+				if((exp1.type == LuaTypes.INTEGER || exp1.type == LuaTypes.FLOAT) &&
+				(exp2.type == LuaTypes.INTEGER || exp2.type == LuaTypes.FLOAT))
+				{
+					retExp = new simpleValue(real(exp1Val) / real(exp2Val));
+				}
+				if(retExp != noone)
+				{
+					return retExp;
+				}
+				else
+				{
+					return callMetamethod(op, exp1, exp2)	
+				}
 			break;
 			case "//":
-			
+				var divideIntegers = function(val1, val2)
+				{
+					return floor(val1/val2);
+				}
+				var divideNumbers = function(val1, val2)
+				{
+					return floor(real(val1)/real(val2));
+				}
+				var retExp = ArithmetricExecute(exp1,exp2,divideIntegers,divideNumbers);
+				if(retExp != noone)
+				{
+					return retExp;
+				}
+				else
+				{
+					return callMetamethod(op, exp1, exp2)	
+				}
 			break;
 			case "%":
-			
+				//This may cause floating point percision issues, a better solution should be found
+				var integralModulo = function(val1, val2)
+				{
+					return (val1 - (int64(val1/val2))*val2);
+				}
+				var numberModulo = function(val1, val2)
+				{
+					return (val1-(int64(real(val1)/real(val2)))*val2)
+				}
+				var retExp = ArithmetricExecute(exp1, exp2,integralModulo,numberModulo);
+				if(retExp != noone)
+				{
+					return retExp;
+				}
+				else
+				{
+					return callMetamethod(op, exp1, exp2)	
+				}
 			break;
 			case "^":
-			
+				var retExp = noone;
+				if((exp1.type == LuaTypes.INTEGER || exp1.type == LuaTypes.FLOAT) &&
+				(exp2.type == LuaTypes.INTEGER || exp2.type == LuaTypes.FLOAT))
+				{
+					retExp = new simpleValue(power(real(val1), real(val2)));
+				}
+				if(retExp != noone)
+				{
+					return retExp;
+				}
+				else
+				{
+					return callMetamethod(op, exp1, exp2)	
+				}
 			break;
 			//Bitwise Operators
 			case "&":
-			
+				var valArr = BitwiseCoerce(exp1,exp2);
+				retExp = new simpleValue(valArr[0] & valArr[1])
 			break;
 			case "|":
-			
+				var valArr = BitwiseCoerce(exp1,exp2);
+				retExp = new simpleValue(valArr[0] | valArr[1])
 			break;
 			case "~":
 				//Can be uniary or binary
+				var valArr = BitwiseCoerce(exp1,exp2);
+				if(isBinary)
+				{
+					retExp = new simpleValue(valArr[0] ^ valArr[1])
+				}
+				else
+				{
+					retExp = new simpleValue(~valArr[0])
+				}
 			break;
 			case ">>":
-			
+				var valArr = BitwiseCoerce(exp1,exp2);
+				retExp = new simpleValue(valArr[0] >> valArr[1])
 			break;
 			case "<<":
-			
+				var valArr = BitwiseCoerce(exp1,exp2);
+				retExp = new simpleValue(valArr[0] << valArr[1])
 			break;
 			//Relational Operators
 			case "==":
-			
+				retExp = new simpleValue(val1 == val2);
 			break;
 			case "~=":
-			
+				retExp = new simpleValue(val1 != val2);
 			break;
 			case "<":
 			
@@ -333,12 +541,24 @@ function Interpreter(chunk) constructor
 			
 			break;
 		}
+
 	}
 	callMetamethod = function(op, exp1, exp2 = noone)
 	{
 		if(exp1.type = LuaTypes.TABLE)
 		{
+			switch(op)
+			{
+				case "[]":
 			
+				break;
+				case "=[]":
+				
+				break;
+				case "()":
+			
+				break;	
+			}
 		}
 		else if(exp2 != noone && exp2.type = LuaTypes.TABLE)
 		{

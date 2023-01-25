@@ -1,31 +1,32 @@
 // Script assets have changed for v2.3.0 see
 // https://help.yoyogames.com/hc/en-us/articles/360005277377 for more information
 
+//This is a singleton as only one Lexer is needed at any time
 function Lexer() constructor
 {
-	keywords = ds_map_create();
-	//keywords[?"and"] = true;
-	keywords[?"break"] = true;
-	keywords[?"do"] = true;
-	keywords[?"else"] = true;
-	keywords[?"elseif"] = true;
-	keywords[?"false"] = true;
-	keywords[?"end"] = true;
-	keywords[?"for"] = true;
-	keywords[?"function"] = true;
-	keywords[?"goto"] = true;
-	keywords[?"if"] = true;
-	keywords[?"in"] = true;
-	keywords[?"local"] = true;
-	keywords[?"nil"] = true;
-	//keywords[?"not"] = true;
-	//keywords[?"or"] = true;
-	keywords[?"repeat"] = true;
-	keywords[?"return"] = true;
-	keywords[?"then"] = true;
-	keywords[?"true"] = true;
-	keywords[?"until"] = true;
-	keywords[?"while"] = true;
+	keywords = {};
+	//keywords[$"and"] = true;
+	keywords[$"break"] = true;
+	keywords[$"do"] = true;
+	keywords[$"else"] = true;
+	keywords[$"elseif"] = true;
+	keywords[$"false"] = true;
+	keywords[$"end"] = true;
+	keywords[$"for"] = true;
+	keywords[$"function"] = true;
+	keywords[$"goto"] = true;
+	keywords[$"if"] = true;
+	keywords[$"in"] = true;
+	keywords[$"local"] = true;
+	keywords[$"nil"] = true;
+	//keywords[$"not"] = true;
+	//keywords[$"or"] = true;
+	keywords[$"repeat"] = true;
+	keywords[$"return"] = true;
+	keywords[$"then"] = true;
+	keywords[$"true"] = true;
+	keywords[$"until"] = true;
+	keywords[$"while"] = true;
 		
 	lex = function(code)
 	{
@@ -134,7 +135,7 @@ function Lexer() constructor
 		}
 		
 		var token = chars.emit(Token.IDENTIFIER);
-		if(keywords[? token.literal])
+		if(keywords[$ token.literal])
 		{
 			token.type = Token.KEYWORD;
 		}

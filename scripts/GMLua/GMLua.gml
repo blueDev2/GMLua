@@ -23,7 +23,7 @@ function GMLua(logmode = global.GMLua_Logmode,filepath = "") constructor
 		if(logmode)
 		{
 			var f = file_text_open_write(folderPath+"ParserLog_"+ fileName+".txt");
-			file_text_write_string(f,global.parser.logString);
+			file_text_write_string(f,global.parser.createLog(0,abstractTree));
 			file_text_close(f);
 		}
 	}

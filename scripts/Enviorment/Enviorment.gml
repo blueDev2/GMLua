@@ -120,6 +120,7 @@ function Table(newVal = {}, newAnalogousObject = {}) constructor
 	val = newVal;
 	type = LuaTypes.TABLE;
 	analogousObject = newAnalogousObject;
+	metaTable = noone;
 	
 	getValue = function(key)
 	{
@@ -150,7 +151,7 @@ function Table(newVal = {}, newAnalogousObject = {}) constructor
 		{
 			val[?key] = newVal;
 		}
-		// newVal is a "simple" expression, which will be saved using reference expression
+		//newVal is a "simple" expression, which will be saved using reference expression
 		else
 		{
 			var refToValue = (new Reference(analogousObject,key,false));

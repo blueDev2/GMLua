@@ -3,6 +3,7 @@
 enum AST
 {
 	CHUNK,
+	BLOCK,
 	STATEMENT,
 	EXPRESSION
 }
@@ -48,6 +49,11 @@ function ASTChunk(globals) constructor
 	self.globals = globals;
 	astType = AST.CHUNK;
 }
+function ASTBlock(block) constructor
+{
+	self.statements = block;
+	astType = AST.BLOCK
+}
 
 function ASTLabel(name) : ASTStatement() constructor
 {
@@ -57,21 +63,21 @@ function ASTLabel(name) : ASTStatement() constructor
 
 function ASTBreak(): ASTStatement() constructor
 {
-	astType = AST.STATEMENT;
+	//astType = AST.STATEMENT;
 	statementType = Statement.BREAK;
 }
 
 function ASTGoto(labelName) : ASTStatement() constructor
 {
 	self.labelName 	= labelName;
-	astType = AST.STATEMENT;
+	//astType = AST.STATEMENT;
 	statementType = Statement.GOTO;
 }
 
 function ASTDo(block): ASTStatement() constructor
 {
 	self.block = block;
-	astType = AST.STATEMENT;
+	//astType = AST.STATEMENT;
 	statementType = Statement.DO;
 }
 
@@ -79,7 +85,7 @@ function ASTWhile(condition,block): ASTStatement() constructor
 {
 	self.condition = condition;
 	self.block = block;
-	astType = AST.STATEMENT;
+	//astType = AST.STATEMENT;
 	statementType = Statement.WHILE;
 }
 
@@ -87,7 +93,7 @@ function ASTRepeat(condition,block): ASTStatement() constructor
 {
 	self.condition = condition;
 	self.block = block;
-	astType = AST.STATEMENT;
+	//astType = AST.STATEMENT;
 	statementType = Statement.REPEAT;
 }
 
@@ -95,7 +101,7 @@ function ASTIf(conditions, blocks): ASTStatement() constructor
 {
 	self.conditions = conditions;
 	self.blocks = blocks;
-	astType = AST.STATEMENT;
+	//astType = AST.STATEMENT;
 	statementType = Statement.IF;
 }
 
@@ -106,7 +112,7 @@ function ASTNumericFor(initalName,inital,limit,step,block): ASTStatement() const
 	self.limit = limit;
 	self.step = step;
 	self.block = block;
-	astType = AST.STATEMENT;
+	//astType = AST.STATEMENT;
 	statementType = Statement.NUMERICFOR;
 }
 
@@ -115,24 +121,24 @@ function ASTGenericFor(namelist,explist,block): ASTStatement() constructor
 	self.namelist = namelist;
 	self.explist = explist;
 	self.block = block;
-	astType = AST.STATEMENT;
+	//astType = AST.STATEMENT;
 	statementType = Statement.GENERICFOR;
 }
 
 function ASTReturn(expressions): ASTStatement() constructor
 {
 	self.expressions = expressions;	
-	astType = AST.STATEMENT;
+	//astType = AST.STATEMENT;
 	statementType = Statement.RETURN;
 }
 
-function ASTDeclaration(names,attribute, expression, isLocal): ASTStatement() constructor
+function ASTDeclaration(names,attributes, expressions, isLocal): ASTStatement() constructor
 {
 	self.names = names;
-	self.attribute = attribute;
-	self.expression = expression;
+	self.attributes = attributes;
+	self.expressions = expressions;
 	self.isLocal = isLocal;
-	astType = AST.STATEMENT;
+	//astType = AST.STATEMENT;
 	statementType = Statement.DECLARATION;
 }
 
@@ -140,8 +146,9 @@ function ASTAssignment(names,expressions): ASTStatement() constructor
 {
 	self.names = names;	
 	self.expressions = expressions;
-	astType = AST.STATEMENT;
+	
 	statementType = Statement.ASSIGNMENT;
+
 }
 
 

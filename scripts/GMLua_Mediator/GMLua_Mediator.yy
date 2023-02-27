@@ -1,9 +1,9 @@
 {
   "resourceType": "GMScript",
   "resourceVersion": "1.0",
-  "name": "GMLua",
-  "isDnD": false,
+  "name": "GMLua_Mediator",
   "isCompatibility": false,
+  "isDnD": false,
   "parent": {
     "name": "GMLua",
     "path": "folders/Scripts/GMLua.yy",

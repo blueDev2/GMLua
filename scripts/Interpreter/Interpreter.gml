@@ -1,6 +1,7 @@
 // Script assets have changed for v2.3.0 see
 // https://help.yoyogames.com/hc/en-us/articles/360005277377 for more information
-function Interpreter() constructor
+global.interpreter = {};
+with(global.interpreter)
 {
 	//Variables that are always available
 	globalScope = new Scope(noone);
@@ -206,16 +207,32 @@ function Interpreter() constructor
 		{
 			var newExp = callMetamethod("[]",curNameExpression,curExpExpression);
 			//This new expression can be Nil
-			return new Reference(newExp);
+			customReference = new Reference(newExp);
 		}
 		return customReference;
 	}
 	
 	visitBinop = function(visitor)
 	{
-		var firstExp = visitExpression(visitor.first);
-		var secondExp = visitExpression(visitor.second);
 		var curOperator = visitor.operator;
+		var opIsAnd = (curOperator == "and");
+		var opIsOr = (curOperator == "or");
+		var firstExp = visitExpression(visitor.first);
+		var firstFalsy = (firstExp.val == false || firstExp.val == undefined);
+		//Short circut eval
+		if(opIsAnd && firstFalsy)
+		{
+			return new Reference(firstExp.getValue());
+		}
+		if(opIsOr && !firstFalsy)
+		{
+			return new Reference(firstExp.getValue());
+		}
+		var secondExp = visitExpression(visitor.second);
+		if(opIsAnd || opIsOr)
+		{
+			return new Reference(secondExp.getValue());
+		}
 		var newExp = helpVisitOp(curOperator,firstExp,secondExp);
 		return new Reference(newExp);
 	}
@@ -228,7 +245,17 @@ function Interpreter() constructor
 	
 	visitFunctionCall = function(visitor)
 	{
-		
+		var ref = visitExpression(visitor.name)
+		var argExpressions = [];
+		var object = ref.container;
+		if(visitor.isMethod)
+		{
+			array_push(argExpressions,object)
+		}
+		for(var i = 0; i < array_length(visitor.args);++i)
+		{
+			array_push(argExpressions,visitExpression(visitor.args[i]));
+		}
 	}
 	
 	visitGroup = function(visitor)
@@ -260,6 +287,27 @@ function Interpreter() constructor
 	//May call a metamethod (which also must return an expression)
 	helpVisitOp = function(op, exp1, exp2 = noone)
 	{
+		//For certain relational operatorions 
+		var negateFinal = false;
+		switch(op)
+		{
+			case "~=":
+				op = "==";
+				negateFinal = true;
+				break;
+			case ">":
+				op = "<";
+				temp = exp1;
+				exp1 = exp2;
+				exp2 = temp;
+				break;
+			case ">=":
+				op = "<=";
+				temp = exp1;
+				exp1 = exp2;
+				exp2 = temp;
+				break;
+		}
 		var isBinary = (exp2 != noone);
 		if(exp2 == noone)
 		{
@@ -267,6 +315,12 @@ function Interpreter() constructor
 		}
 		var exp1Val = exp1.val;
 		var exp2Val = exp2.val;
+		
+
+		static MetamethodFailureException = function(exp1,exp2,op)
+		{
+			InterpreterException("Failed to find an appropriate metamethod for " + string(exp1) + " and " + string(exp2) +"\nUnder the operator: " + op);
+		}
 		static ArithmetricExecute = function(exp1, exp2, case1Function, case2Function = noone)
 		{
 			if(case2Function == noone)
@@ -328,12 +382,13 @@ function Interpreter() constructor
 			{
 				return noone
 			}
-			return simpleValue(func(exp1Val, exp2Val));
+			return new simpleValue(func(exp1Val, exp2Val));
 		}
 		switch(op)
 		{
 			//Arithmetic Operators
 			case "+":
+			{
 				var addIntegers = function(val1, val2)
 				{
 					return val1+val2;
@@ -343,16 +398,19 @@ function Interpreter() constructor
 					return real(val1)+real(val2);
 				}
 				var retExp = ArithmetricExecute(exp1, exp2, addIntegers, addNumbers);
-				if(retExp != noone)
+				if(retExp == noone)
 				{
-					return retExp;
+					retExp = callMetamethod(op, exp1, exp2);
+					if(retExp == noone)
+					{
+						MetamethodFailureException(op, exp1, exp2);
+					}
 				}
-				else
-				{
-					return callMetamethod(op, exp1, exp2);
-				}
+				return retExp;
+			}
 			break;
 			case "-":
+			{
 				var retExp = noone;
 				//Can be uniary or binary
 				if(isBinary)
@@ -375,16 +433,26 @@ function Interpreter() constructor
 					}
 					retExp = ArithmetricExecute( exp1, exp2, negateNumber);
 				}
-				if(retExp != noone)
+				if(retExp == noone)
 				{
-					return retExp;
+					if(isBinary)
+					{
+						retExp = callMetamethod(op, exp1, exp2);
+					}
+					else
+					{
+						retExp = callMetamethod(op, exp1);
+					}
+					if(retExp == noone)
+					{
+						MetamethodFailureException(op, exp1, exp2);
+					}
 				}
-				else
-				{
-					return callMetamethod(op, exp1, exp2)	
-				}
+				return retExp;
+			}
 			break;
 			case "*":
+			{
 				var multiplyIntegers = function(val1, val2)
 				{
 					return val1*val2;
@@ -394,32 +462,38 @@ function Interpreter() constructor
 					return real(val1)*real(val2)
 				}
 				var retExp = ArithmetricExecute(exp1, exp2,multiplyIntegers, multiplyNumbers);
-				if(retExp != noone)
+				if(retExp == noone)
 				{
-					return retExp;
+					retExp = callMetamethod(op, exp1, exp2);
+					if(retExp == noone)
+					{
+						MetamethodFailureException(op, exp1, exp2);
+					}
 				}
-				else
-				{
-					return callMetamethod(op, exp1, exp2)	
-				}
+				return retExp;
+			}
 			break;
 			case "/":
+			{
 				var retExp = noone;
 				if((exp1.type == LuaTypes.INTEGER || exp1.type == LuaTypes.FLOAT) &&
 				(exp2.type == LuaTypes.INTEGER || exp2.type == LuaTypes.FLOAT))
 				{
 					retExp = new simpleValue(real(exp1Val) / real(exp2Val));
 				}
-				if(retExp != noone)
+				if(retExp == noone)
 				{
-					return retExp;
+					retExp = callMetamethod(op, exp1, exp2);
+					if(retExp == noone)
+					{
+						MetamethodFailureException(op, exp1, exp2);
+					}
 				}
-				else
-				{
-					return callMetamethod(op, exp1, exp2)	
-				}
+				return retExp;
+			}
 			break;
 			case "//":
+			{
 				var divideIntegers = function(val1, val2)
 				{
 					return floor(val1/val2);
@@ -429,16 +503,19 @@ function Interpreter() constructor
 					return floor(real(val1)/real(val2));
 				}
 				var retExp = ArithmetricExecute(exp1,exp2,divideIntegers,divideNumbers);
-				if(retExp != noone)
+				if(retExp == noone)
 				{
-					return retExp;
+					retExp = callMetamethod(op, exp1, exp2);
+					if(retExp == noone)
+					{
+						MetamethodFailureException(op, exp1, exp2);
+					}
 				}
-				else
-				{
-					return callMetamethod(op, exp1, exp2)	
-				}
+				return retExp;
+			}
 			break;
 			case "%":
+			{
 				//This may cause floating point percision issues, a better solution should be found
 				var integralModulo = function(val1, val2)
 				{
@@ -449,112 +526,243 @@ function Interpreter() constructor
 					return (val1-(int64(real(val1)/real(val2)))*val2)
 				}
 				var retExp = ArithmetricExecute(exp1, exp2,integralModulo,numberModulo);
-				if(retExp != noone)
+				if(retExp == noone)
 				{
-					return retExp;
+					retExp = callMetamethod(op, exp1, exp2);
+					if(retExp == noone)
+					{
+						MetamethodFailureException(op, exp1, exp2);
+					}
 				}
-				else
-				{
-					return callMetamethod(op, exp1, exp2)	
-				}
+				return retExp;
+			}
 			break;
 			case "^":
+			{
 				var retExp = noone;
 				if((exp1.type == LuaTypes.INTEGER || exp1.type == LuaTypes.FLOAT) &&
 				(exp2.type == LuaTypes.INTEGER || exp2.type == LuaTypes.FLOAT))
 				{
 					retExp = new simpleValue(power(real(val1), real(val2)));
 				}
-				if(retExp != noone)
+				if(retExp == noone)
 				{
-					return retExp;
+					retExp = callMetamethod(op, exp1, exp2);
+					if(retExp == noone)
+					{
+						MetamethodFailureException(op, exp1, exp2);
+					}
 				}
-				else
-				{
-					return callMetamethod(op, exp1, exp2)	
-				}
+				return retExp;
+			}
 			break;
 			//Bitwise Operators
 			case "&":
-				var valArr = BitwiseCoerce(exp1,exp2);
-				retExp = new simpleValue(valArr[0] & valArr[1])
+			{
+				var bitwiseAND = function(val1, val2)
+				{
+					return val1 & val2;
+				}
+				var retExp = BitwiseExecute(exp1,exp2,bitwiseAND);
+				if(retExp == noone)
+				{
+					retExp = callMetamethod(op, exp1, exp2);
+					if(retExp == noone)
+					{
+						MetamethodFailureException(op, exp1, exp2);
+					}
+				}
+				return retExp;
+			}
 			break;
 			case "|":
-				var valArr = BitwiseCoerce(exp1,exp2);
-				retExp = new simpleValue(valArr[0] | valArr[1])
+			{
+				var bitwiseOR = function(val1, val2)
+				{
+					return val1 | val2;
+				}
+				var retExp = BitwiseExecute(exp1,exp2,bitwiseOR);
+				if(retExp == noone)
+				{
+					retExp = callMetamethod(op, exp1, exp2);
+					if(retExp == noone)
+					{
+						MetamethodFailureException(op, exp1, exp2);
+					}
+				}
+				return retExp;
+			}
 			break;
 			case "~":
+			{
 				//Can be uniary or binary
-				var valArr = BitwiseCoerce(exp1,exp2);
+				var retExp = noone;
 				if(isBinary)
 				{
-					retExp = new simpleValue(valArr[0] ^ valArr[1])
+					var bitwiseXOR = function(val1, val2)
+					{
+						return val1 ^ val2;
+					}
+					retExp = BitwiseExecute(exp1,exp2,bitwiseXOR);
 				}
 				else
 				{
-					retExp = new simpleValue(~valArr[0])
+					var bitwiseNOT = function(val1, val2)
+					{
+						return ~val1
+					}
+					retExp = BitwiseExecute(exp1,exp2,bitwiseNOT);
 				}
+				if(retExp == noone)
+				{
+					if(isBinary)
+					{
+						retExp = callMetamethod(op, exp1, exp2);
+					}
+					else
+					{
+						retExp = callMetamethod(op, exp1);	
+					}
+					if(retExp == noone)
+					{
+						MetamethodFailureException(op, exp1, exp2);
+					}
+				}
+				return retExp;
+			}
 			break;
 			case ">>":
-				var valArr = BitwiseCoerce(exp1,exp2);
-				retExp = new simpleValue(valArr[0] >> valArr[1])
+			{
+				var bitwiseRS = function(val1, val2)
+				{
+					return val1 >> val2;
+				}
+				var retExp = BitwiseExecute(exp1,exp2,bitwiseRS);
+				if(retExp == noone)
+				{
+					retExp = callMetamethod(op, exp1, exp2);
+					if(retExp == noone)
+					{
+						MetamethodFailureException(op, exp1, exp2);
+					}
+				}
+				return retExp;
+			}
 			break;
 			case "<<":
-				var valArr = BitwiseCoerce(exp1,exp2);
-				retExp = new simpleValue(valArr[0] << valArr[1])
+			{
+				var bitwiseLS = function(val1, val2)
+				{
+					return val1 << val2;
+				}
+				var retExp = BitwiseExecute(exp1,exp2,bitwiseLS);
+				if(retExp == noone)
+				{
+					retExp = callMetamethod(op, exp1, exp2);
+					if(retExp == noone)
+					{
+						MetamethodFailureException(op, exp1, exp2);
+					}
+				}
+				return retExp;
+			}
 			break;
 			//Relational Operators
 			case "==":
-				retExp = new simpleValue(val1 == val2);
-			break;
-			case "~=":
-				retExp = new simpleValue(val1 != val2);
+			{
+				var retExp = noone;
+				if(exp1.type != exp2.type)
+				{
+					retExp = false;	
+				}
+				else
+				{
+					if(exp1.type == LuaTypes.TABLE && exp2.type == LuaTypes.TABLE)
+					{
+						retExp = (exp1 == exp2);
+						if(!retExp)
+						{
+							retExp = callMetamethod(op, exp1,exp2);
+						}
+						if(retExp == noone)
+						{
+							retExp = false;
+						}
+					}
+					else if(exp1.type == LuaTypes.FUNCTION)
+					{
+						retExp = (exp1 == exp2);
+					}
+					else
+					{
+						retExp = (exp1.val == exp2.val);
+					}
+				}
+				if(retExp == noone)
+				{
+					MetamethodFailureException(op, exp1, exp2);
+				}
+				if(negateFinal)
+				{
+					retExp = !retExp;
+				}
+				return retExp;
+			}
 			break;
 			case "<":
-			
-			break;
-			case ">":
-			
+			{
+				
+			}
 			break;
 			case "<=":
-			
-			break;
-			case ">=":
-			
+			{
+				
+			}
 			break;
 			//Logical Operators
-			case "and":
-			
-			break;
-			case "or":
-			
-			break;
+			//To allow for short-circut evaluation, visitBinop will deal
+			//with "and" and "or" operators
 			case "not":
-			
+			{
+				if(exp1Val == false || exp1Val == undefined)
+				{
+					return new simpleValue(true);
+				}
+				return new simpleValue(false);
+			}
 			break;
 			//Concatenation
 			case "..":
-			
+			{
+				
+			}
 			break;
 			//Length
 			case "#":
-			
+			{
+				
+			}
 			break;
 		}
 
 	}
+	//This may return "noone", helpVisitOp must deal with that value
+	//Otherwise, this must return an expression
 	callMetamethod = function(op, exp1, exp2 = noone)
 	{
 		if(exp1.type = LuaTypes.TABLE)
 		{
 			switch(op)
 			{
+				//Index
 				case "[]":
 			
 				break;
+				//New Index
 				case "=[]":
 				
 				break;
+				//Call
 				case "()":
 			
 				break;	

@@ -17,9 +17,9 @@ function InterpreterException(msg)
 	throw({type: ExceptionType.UNCATCHABLE,value: "RuntimeException: "+ msg});
 }
 
-function ReturnException(value)
+function ReturnException(val)
 {
-	throw({type: ExceptionType.RETURN, value: value});
+	throw({type: ExceptionType.RETURN, value: val});
 }
 
 function BreakException()

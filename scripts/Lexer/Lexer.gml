@@ -2,7 +2,8 @@
 // https://help.yoyogames.com/hc/en-us/articles/360005277377 for more information
 
 //This is a singleton as only one Lexer is needed at any time
-function Lexer() constructor
+global.lexer = {}
+with(global.lexer)
 {
 	keywords = {};
 	//keywords[$"and"] = true;
@@ -285,6 +286,23 @@ function Lexer() constructor
 		}
 		
 		var token = chars.emit(Token.STRING);
+		var strVal = token.literal;
+		var val;
+		var temp = string_char_at(strVal,1)
+		if(temp == "\"" || temp == "'")
+		{
+			val = string_copy(strVal,2,string_length(strVal)-2)
+		}
+		else
+		{
+			var index = 2;
+			while(string_char_at(strVal,index) == "=")
+			{
+				++index;	
+			} 
+			val = string_copy(strVal,index+1,string_length(strVal)-2*index);
+		}
+		token.literal = val;
 		return token;
 	}
 	
@@ -420,5 +438,3 @@ function charStream(input) constructor
 		return token;
 	}
 }
-
-global.lexer = new Lexer();

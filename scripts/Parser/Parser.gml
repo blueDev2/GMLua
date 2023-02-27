@@ -3,7 +3,8 @@
 
 //This is a singleton as only one Parser is needed at any time
 //When another tokenList must be parsed, a function is provided to do so
-function Parser() constructor
+global.parser = {}
+with(global.parser)
 {
 	operatorPrecedence = [];
 	operatorPrecedence[11] = ["^"];
@@ -112,7 +113,7 @@ function Parser() constructor
 			}
 			if(is_undefined(newAST))
 			{
-				show_debug_message(statements);
+				//show_debug_message(statements);
 				ParserException(string(tokens.get(0)) + "is not a start of a statement",tokens.get(0).line)
 			}
 			if(newAST.astType == AST.STATEMENT && newAST.statementType == Statement.GOTO)
@@ -704,22 +705,8 @@ function Parser() constructor
 		}
 		else if(match(Token.STRING))
 		{
-			var strVal = tokens.get(-1).literal;
-			var val;
-			var temp = string_char_at(strVal,1)
-			if(temp == "\"" || temp == "'")
-			{
-				val = string_copy(strVal,2,string_length(strVal)-2)
-			}
-			else
-			{
-				var index = 2;
-				while(string_char_at(strVal,index) == "=")
-				{
-					++index;	
-				} 
-				val = string_copy(strVal,index+1,string_length(strVal)-2*index);
-			}
+			var val = tokens.get(-1).literal;
+			
 			return new ASTLiteral(val);
 		}
 		else if(match("function"))
@@ -786,7 +773,7 @@ function Parser() constructor
 			}
 			return prefix;
 		}
-		ParserException("Parser Issue, please check parsePrefixExpression function",tokens.get(-1).line);
+		ParserException(string(tokens.get(-1)) + " was unexpected",tokens.get(-1).line);
 	}
 	
 	parseFunctionCall = function(prefix = noone)
@@ -805,6 +792,7 @@ function Parser() constructor
 		try
 		{
 			var args = [];
+			var isMethod = false;
 			if(match(":"))
 			{
 				var name;
@@ -816,7 +804,7 @@ function Parser() constructor
 				{
 					ParserException("Function call missing Identifier" ,tokens.get(-1).line);
 				}
-				args = [prefix];
+				isMethod = true;
 				prefix = new ASTAccess(prefix,new ASTLiteral(name))
 			}
 			if(match("("))
@@ -836,29 +824,14 @@ function Parser() constructor
 			}
 			else if(match(Token.STRING))
 			{
-				var strVal = tokens.get(-1).literal;
-				var val;
-				var temp = string_char_at(strVal,1)
-				if(temp == "\"" || temp == "'")
-				{
-					val = string_copy(strVal,2,string_length(strVal)-2)
-				}
-				else
-				{
-					var index = 2;
-					while(string_char_at(strVal,index) == "=")
-					{
-						++index;	
-					} 
-					val = string_copy(strVal,index+1,string_length(strVal)-2*index);
-				}
+				val = tokens.get(-1).literal;
 				args = [new ASTLiteral(val)];
 			}
 			else
 			{
 				ParserException("Function call missing arguments",tokens.get(-1).line);
 			}
-			return new ASTFunctionCall(prefix,args);
+			return new ASTFunctionCall(prefix,args,isMethod);
 		}
 		catch(e)
 		{
@@ -981,7 +954,7 @@ function Parser() constructor
 		
 		if(!match("}"))
 		{
-			show_debug_message(tokens.get(0))
+			//show_debug_message(tokens.get(0))
 			ParserException("Missing \"}\" for table constructor",tokens.get(-1).line);	
 		}
 		return new ASTTable(keys,values);
@@ -1070,7 +1043,7 @@ function Parser() constructor
 						for(var j = 0; j < array_length(curStatement.expressions);++j)
 						{
 							var curExpression = curStatement.expressions[j];
-							show_debug_message(curExpression.expressionType == Expression.FUNCTIONBODY)
+							//show_debug_message(curExpression.expressionType == Expression.FUNCTIONBODY)
 							if(curExpression.expressionType == Expression.FUNCTIONBODY)
 							{
 								appendString += ws + "paramlist: "+ string(curExpression.paramlist) + ", "+
@@ -1098,7 +1071,7 @@ function Parser() constructor
 						for(var j = 0; j < array_length(curStatement.expressions);++j)
 						{
 							var curExpression = curStatement.expressions[j];
-							show_debug_message(curExpression.expressionType == Expression.FUNCTIONBODY)
+							//show_debug_message(curExpression.expressionType == Expression.FUNCTIONBODY)
 							if(curExpression.expressionType == Expression.FUNCTIONBODY)
 							{
 								appendString += ws + "paramlist: "+ string(curExpression.paramlist) + 
@@ -1191,4 +1164,3 @@ function TokenStream(tokens) constructor
 		}
 	};
 }
-global.parser = new Parser();

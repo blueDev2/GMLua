@@ -197,15 +197,14 @@ function ASTAccess(name,expression = noone): ASTExpression()  constructor
 {
 	self.name = name;
 	self.expression = expression;
-	
 	expressionType = Expression.ACCESS;
 }
 
-function ASTFunctionCall(name,args): ASTExpression()  constructor
+function ASTFunctionCall(name,args,isMethod = false): ASTExpression()  constructor
 {
 	self.name = name;	
 	self.args = args;
-	
+	self.isMethod =isMethod;
 	expressionType = Expression.FUNCTIONCALL;
 }
 

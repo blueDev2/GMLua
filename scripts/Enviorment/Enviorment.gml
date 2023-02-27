@@ -28,7 +28,7 @@ function valueParent() constructor
 }
 
 //Input expressions, output expressions. Treated as a reference in the
-//Interpreter. Point at "simple" values
+//Interpreter. Point at non-table values
 //SHOULD ALWAYS BE ASSOCIATED WITH A TABLE
 function ReferenceType(container, key) : valueParent() constructor
 {
@@ -45,6 +45,10 @@ function ReferenceType(container, key) : valueParent() constructor
 }
 function simpleValue(val): valueParent() constructor
 {
+	if(typeof(val) == "int32")
+	{
+		val = int64(val);	
+	}
 	self.val = val;
 	switch(typeof(val))
 	{
@@ -125,10 +129,8 @@ function Table(newVal = {}, newAnalogousObject = {}) constructor
 	getValue = function(key)
 	{
 		key = LuaToGML(key);
-		var expression = val[?key];	
-		if(expression.type == LuaTypes.FUNCTION ||
-		expression.type == LuaTypes.THREAD || 
-		expression.type == LuaTypes.TABLE)
+		var expression = val[$key];	
+		if(expression.type == LuaTypes.TABLE)
 		{
 			return expression;
 		}
@@ -145,30 +147,38 @@ function Table(newVal = {}, newAnalogousObject = {}) constructor
 	setValue = function(key,newVal)
 	{
 		key = LuaToGML(key);
-		if(newVal.type == LuaTypes.FUNCTION ||
-		newVal.type == LuaTypes.THREAD || 
-		newVal.type == LuaTypes.TABLE)
+		//The reference struct is used because references can handle both
+		//structs and instances
+		var refToValue = (new Reference(analogousObject,key,false));
+		refToValue.setValue(LuaToGML(newVal));
+		if(newVal.type == LuaTypes.TABLE)
 		{
-			val[?key] = newVal;
+			val[$key] = newVal;
 		}
-		//newVal is a "simple" expression, which will be saved using reference expression
+		//newVal is a non-table expression, which will be saved using reference expression that
+		//points to the analagous object.
 		else
 		{
-			var refToValue = (new Reference(analogousObject,key,false));
-			refToValue.setValue(LuaToGML(newVal));
-			val[?key] = new ReferenceType(analogousObject,key);
+			val[$key] = new ReferenceType(analogousObject,key);
 		}
 	}
 }
 function LuaToGML(luaItem)
 {
+	if(luaItem.type == LuaTypes.TABLE)
+	{
+		return luaItem.analogousObject;	
+	}
+	if(luaItem.type == LuaTypes.FUNCTION || luaItem.type == LuaTypes.THREAD)
+	{
+		return luaItem;
+	}
 	return luaItem.val;
 }
 
 //There is no difference between a number and a script function in GML
-//If trying to use a script function, pass it through 
+//If trying to use a script function(func), pass it through 
 //method(undefined, func) first
-//As an example, "var a = 4; a();" can run sucessfully
 function GMLToLua(gmlItem)
 {
 	var type = typeof(gmlItem);
@@ -181,7 +191,9 @@ function GMLToLua(gmlItem)
 	{
 		return new GMFunction(gmlItem);
 	}
-	else if(type == "struct")
+	//Do not call instance_destroy on an object used in a Lua Table
+	//Unless you know you will not use that table after destroying the instance
+	else if(type == "struct" || type == "ref")
 	{
 		return new Table({},gmlItem);
 	}

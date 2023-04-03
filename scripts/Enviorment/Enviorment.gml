@@ -27,6 +27,11 @@ function valueParent() constructor
 	}
 }
 
+function expression(value) : valueParent()  constructor
+{
+	
+}
+
 //Input expressions, output expressions. Treated as a reference in the
 //Interpreter. Point at non-table values
 //SHOULD ALWAYS BE ASSOCIATED WITH A TABLE

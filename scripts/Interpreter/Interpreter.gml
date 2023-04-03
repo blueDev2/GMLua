@@ -673,29 +673,29 @@ with(global.interpreter)
 				var retExp = noone;
 				if(exp1.type != exp2.type)
 				{
-					retExp = false;	
+					retExp = new simpleValue(false);	
 				}
 				else
 				{
 					if(exp1.type == LuaTypes.TABLE && exp2.type == LuaTypes.TABLE)
 					{
-						retExp = (exp1 == exp2);
-						if(!retExp)
+						retExp = new simpleValue(exp1 == exp2);
+						if(!retExp.val)
 						{
 							retExp = callMetamethod(op, exp1,exp2);
 						}
-						if(retExp == noone)
+						if(retExp.val == noone)
 						{
-							retExp = false;
+							retExp = new simpleValue(false);
 						}
 					}
 					else if(exp1.type == LuaTypes.FUNCTION)
 					{
-						retExp = (exp1 == exp2);
+						retExp = new simpleValue(exp1 == exp2);
 					}
 					else
 					{
-						retExp = (exp1.val == exp2.val);
+						retExp = new simpleValue(exp1.val == exp2.val);
 					}
 				}
 				if(retExp == noone)
@@ -704,19 +704,43 @@ with(global.interpreter)
 				}
 				if(negateFinal)
 				{
-					retExp = !retExp;
+					retExp.val = !retExp.val;
 				}
 				return retExp;
 			}
 			break;
 			case "<":
 			{
-				
+				var retExp = noone;
+				var isExp1Num = (exp1.type == LuaTypes.INTEGER) || (exp1.type == LuaTypes.FLOAT);
+				var isExp2Num = (exp2.type == LuaTypes.INTEGER) || (exp2.type == LuaTypes.FLOAT);
+				if(isExp1Num && isExp1Num)
+				{
+					return new simpleValue(exp1Val < exp2Val);
+				}
+				retExp = callMetamethod(op,exp1,exp2);
+				if(retExp == noone)
+				{
+					MetamethodFailureException(op, exp1, exp2);
+				}
+				return retExp;
 			}
 			break;
 			case "<=":
 			{
-				
+				var retExp = noone;
+				var isExp1Num = (exp1.type == LuaTypes.INTEGER) || (exp1.type == LuaTypes.FLOAT);
+				var isExp2Num = (exp2.type == LuaTypes.INTEGER) || (exp2.type == LuaTypes.FLOAT);
+				if(isExp1Num && isExp1Num)
+				{
+					return new simpleValue(exp1Val <= exp2Val);
+				}
+				retExp = callMetamethod(op,exp1,exp2);
+				if(retExp == noone)
+				{
+					MetamethodFailureException(op, exp1, exp2);
+				}
+				return retExp;
 			}
 			break;
 			//Logical Operators
@@ -734,22 +758,55 @@ with(global.interpreter)
 			//Concatenation
 			case "..":
 			{
-				
+				var retExp = noone;
+				var isExp1Stringable = (exp1.type == LuaTypes.INTEGER) || (exp1.type == LuaTypes.FLOAT) || (exp1.type == LuaTypes.STRING);
+				var isExp2Stringable = (exp2.type == LuaTypes.INTEGER) || (exp2.type == LuaTypes.FLOAT)|| (exp1.type == LuaTypes.STRING);
+				if(isExp1Stringable && isExp2Stringable)
+				{
+					exp1Val = string(exp1Val);
+					exp2Val = string(exp2Val);
+					return new simpleValue(exp1Val + exp2Val)
+				}
+				retExp = callMetamethod(op,exp1,exp2);
+				if(retExp == noone)
+				{
+					MetamethodFailureException(op, exp1, exp2);
+				}
+				return retExp;
 			}
 			break;
 			//Length
 			case "#":
 			{
+				var retExp = noone;
+				if(exp1.type == LuaTypes.STRING)
+				{
+					return new simpleValue(string_length(exp1Val))
+				}
+				else if (exp1.type == LuaTypes.TABLE)
+				{
+					return new simpleValue(variable_struct_names_count(exp1Val))	
+				}
+				else
+				{
+					retExp = callMetamethod(op,exp1,exp2);
+				}
 				
+				if(retExp == noone)
+				{
+					MetamethodFailureException(op, exp1, exp2);
+				}
+				return retExp;
 			}
 			break;
 		}
-
+		throw("This statement should be impossible to reach, check the preceding switch statement");
 	}
 	//This may return "noone", helpVisitOp must deal with that value
 	//Otherwise, this must return an expression
 	callMetamethod = function(op, exp1, exp2 = noone)
 	{
+		throw("Incomplete feature, the use of metamethods (currently) is disallowed")
 		if(exp1.type = LuaTypes.TABLE)
 		{
 			switch(op)

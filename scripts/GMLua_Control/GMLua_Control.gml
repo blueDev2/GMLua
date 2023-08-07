@@ -2,12 +2,12 @@ global.GMLua = {}
 with(global.GMLua)
 {
 	self.logmode = true
-	self.lexer = undefined;
+	/*self.lexer = undefined;
 	self.parser = undefined;
-	self.interpreter = undefined;
+	self.interpreter = undefined;*/
 	function lexAndParse(code,logmode = self.logmode,folderPath="",fileName="Misc")
 	{
-		var lexedTokens = lexer.lex(code);
+		var lexedTokens = global.lexer.lex(code);
 		if(logmode)
 		{
 			var f;
@@ -24,7 +24,7 @@ with(global.GMLua)
 			file_text_close(f);
 		}
 	
-		var abstractTree = parser.parseChunk(lexedTokens);
+		var abstractTree = global.parser.parseChunk(lexedTokens,folderPath,fileName);
 
 		if(logmode)
 		{
@@ -38,17 +38,18 @@ with(global.GMLua)
 			{
 				f = file_text_open_write(folderPath+"ParserLog_"+ fileName+".txt");	
 			}
-			file_text_write_string(f,parser.createLog(0,abstractTree));
+			file_text_write_string(f,global.parser.createChunkBlock(abstractTree));
 			file_text_close(f);
 		}
+		return abstractTree;
 	}
-	function runFunction(abstractTree, scope = new Scope())
+	function runAST(abstractTree, scope = new Scope(), logFolderPath = "")
 	{
-		interpreter = Interpreter(abstractTree);
+		var newScope = global.interpreter.visitChunk(abstractTree,scope);
 		if(logmode)
 		{
-			var f = file_text_open_write(folderPath + "InterpreterLog.txt");
-			file_text_write_string(f,string_replace_all(string(interpreter.globalScope),"},","}\n\n"));
+			var f = file_text_open_write(logFolderPath + "InterpreterLog.txt");
+			file_text_write_string(f,string(newScope));
 			file_text_close(f);
 		}
 	}
@@ -64,11 +65,11 @@ with(global.GMLua)
 			code += file_text_readln(file);
 		}
 		file_text_close(file);
-		lexAndParse(code,logmode,folderPath,fileName);
+		return lexAndParse(code,logmode,folderPath,fileName);
 	}
 
 	function createLuaFromString(str,logmode = noone)
 	{
-		lexAndParse(str,logmode);
+		return lexAndParse(str,logmode);
 	}
 }

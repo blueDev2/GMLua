@@ -12,14 +12,17 @@ enum ExceptionType
 	UNCATCHABLE
 }
 
+//Return or Break exceptions should be converted to Uncatchable
+//Exceptions when applicaple.
 function InterpreterException(msg)
 {
 	throw({type: ExceptionType.UNCATCHABLE,value: "RuntimeException: "+ msg});
 }
 
-function ReturnException(val)
+function ReturnException(expression)
 {
-	throw({type: ExceptionType.RETURN, value: val});
+	var excpt = {type: ExceptionType.RETURN, value: expression}
+	throw(excpt);
 }
 
 function BreakException()

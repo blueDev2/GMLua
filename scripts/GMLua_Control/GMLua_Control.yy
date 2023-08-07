@@ -1,7 +1,7 @@
 {
   "resourceType": "GMScript",
   "resourceVersion": "1.0",
-  "name": "Utility",
+  "name": "GMLua_Control",
   "isCompatibility": false,
   "isDnD": false,
   "parent": {

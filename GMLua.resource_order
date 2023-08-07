@@ -18,14 +18,15 @@
   ],
   "ResourceOrderSettings": [
     {"name":"AST","order":1,"path":"scripts/AST/AST.yy",},
+    {"name":"GMLua_Library","order":12,"path":"scripts/GMLua_Library/GMLua_Library.yy",},
     {"name":"Enviorment","order":2,"path":"scripts/Enviorment/Enviorment.yy",},
-    {"name":"GMLua_Mediator","order":4,"path":"scripts/GMLua_Mediator/GMLua_Mediator.yy",},
+    {"name":"GMLua_Control","order":4,"path":"scripts/GMLua_Control/GMLua_Control.yy",},
     {"name":"Exceptions","order":3,"path":"scripts/Exceptions/Exceptions.yy",},
     {"name":"Scope","order":8,"path":"scripts/Scope/Scope.yy",},
     {"name":"Token","order":9,"path":"scripts/Token/Token.yy",},
     {"name":"Parser","order":7,"path":"scripts/Parser/Parser.yy",},
     {"name":"Lexer","order":6,"path":"scripts/Lexer/Lexer.yy",},
-    {"name":"Utility","order":11,"path":"scripts/Utility/Utility.yy",},
+    {"name":"GMLua_Utility","order":11,"path":"scripts/GMLua_Utility/GMLua_Utility.yy",},
     {"name":"Interpreter","order":5,"path":"scripts/Interpreter/Interpreter.yy",},
   ],
 }

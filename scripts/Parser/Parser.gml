@@ -19,16 +19,13 @@ with(global.parser)
 	operatorPrecedence[2] = ["<",">","<=",">=","~=","=="];
 	operatorPrecedence[1] = ["and"];
 	operatorPrecedence[0] = ["or"];
-	scopeDepth = 0;
-	logString = "";
-	parseChunk = function(tokens)
+	//scopeDepth = 0;
+	function parseChunk(tokens,sourceFilePath, sourceFileName)
 	{
-		logString = "";
 		self.tokens = new TokenStream(tokens);
-		self.goto = {};
-		var chunk = parseBlock();
-		scopeDepth = 0;
-		logString = createLog(0,chunk)
+		//self.goto = {};
+		var chunk = new ASTChunk(parseBlock(),sourceFilePath,sourceFileName);
+
 		//logString = string(chunk)
 		return chunk;
 	}
@@ -54,6 +51,7 @@ with(global.parser)
 				}
 				catch(e)
 				{
+					
 					setIndex(curIndex);
 					var varList = parseVarList();
 					if(!match("="))
@@ -73,7 +71,6 @@ with(global.parser)
 			else if(peek("break"))
 			{
 				newAST = parseBreakStatement();
-				hasBreak = true;
 			}
 			else if(peek("goto"))
 			{
@@ -284,14 +281,14 @@ with(global.parser)
 		}
 		if(match("="))
 		{
-			var initalName = tokens.get(-1).literal;
+			var initalName = tokens.get(-2).literal;
 			var inital = parseExpression();
 			if(!match(","))
 			{
 				ParserException("For statement is missing \",\"",tokens.get(-1).line);	
 			}
 			var limit = parseExpression();
-			var step = 1;
+			var step = new ASTLiteral(1);
 			if(match(","))
 			{
 				step = parseExpression();
@@ -303,6 +300,7 @@ with(global.parser)
 		{
 			var nameList = [];
 			var expList = [];
+			tokens.index -= 1;
 			if(!peek(Token.IDENTIFIER))
 			{
 				ParserException("For statement is missing an identifier",tokens.get(-1).line);
@@ -383,8 +381,10 @@ with(global.parser)
 		{
 			array_push(body , parseFunctionBody());	
 		}
-		return new ASTDeclaration(name,noone,body,false);
+
+		return new ASTAssignment([name],body);
 	}
+	
 	parseFunctionBody = function(parameters = [])
 	{
 		var varargs = false;
@@ -448,7 +448,7 @@ with(global.parser)
 			tokens.advance();
 			var body = [];
 			array_push(body,parseFunctionBody());	
-			return new ASTDeclaration(name,noone,body,true);
+			return new ASTDeclaration(name,[noone],body);
 		}
 		else
 		{
@@ -471,7 +471,7 @@ with(global.parser)
 				tokens.advance();
 				if(!match(">"))
 				{
-					ParserException("Missing \">\" for variable declaration",tokens.get(-1).line);	
+					ParserException("Missing \">\" for variable attribute declaration",tokens.get(-1).line);	
 				}
 			}
 			else
@@ -509,7 +509,13 @@ with(global.parser)
 				ParserException("Missing \"=\" for variable declaration",tokens.get(-1).line);	
 			}
 			expressions = parseExpressionList();
-			return new ASTDeclaration(names,attributes,expressions,true);
+			var ASTnames = [];
+			for(var i = 0; i < array_length(names); ++i)
+			{
+				var curAST = new ASTAccess(names[i]);
+				array_push(ASTnames,curAST);
+			}
+			return new ASTDeclaration(ASTnames,attributes,expressions);
 		}		
 	}
 	
@@ -596,6 +602,8 @@ with(global.parser)
 		{
 			var operator = tokens.get(0).literal;
 			tokens.advance();
+			// Operators at level 11 and 7 are right-associative.
+			// All other operators are left-associative
 			var second = parseExpressionTerm(level+1);
 			if(level == 11 || level == 7)
 			{
@@ -792,7 +800,7 @@ with(global.parser)
 		try
 		{
 			var args = [];
-			var isMethod = false;
+			var finalIndex = noone;
 			if(match(":"))
 			{
 				var name;
@@ -804,8 +812,7 @@ with(global.parser)
 				{
 					ParserException("Function call missing Identifier" ,tokens.get(-1).line);
 				}
-				isMethod = true;
-				prefix = new ASTAccess(prefix,new ASTLiteral(name))
+				finalIndex = new ASTLiteral(name);
 			}
 			if(match("("))
 			{
@@ -831,7 +838,7 @@ with(global.parser)
 			{
 				ParserException("Function call missing arguments",tokens.get(-1).line);
 			}
-			return new ASTFunctionCall(prefix,args,isMethod);
+			return new ASTFunctionCall(prefix,args,finalIndex);
 		}
 		catch(e)
 		{
@@ -866,10 +873,6 @@ with(global.parser)
 	
 	parseTableConstructor = function()
 	{
-		if(tokens.get(0).line == 59)
-		{
-			var a = 1;	
-		}
 		var keys = [];
 		var values = [];
 		if(!match("{"))
@@ -907,7 +910,7 @@ with(global.parser)
 			}
 			else
 			{
-				array_push(keys, index);
+				array_push(keys, new ASTLiteral(index));
 				array_push(values, exp1);
 				index++;
 			}
@@ -944,7 +947,7 @@ with(global.parser)
 				}
 				else
 				{
-					array_push(keys, index);
+					array_push(keys, new ASTLiteral(index));
 					array_push(values, exp1);
 					index++;
 				}
@@ -1012,131 +1015,136 @@ with(global.parser)
 		}
 		return false;
 	}
+	function createChunkBlock(chunk)
+	{
+		var appendStr = chunk.sourceFilePath+chunk.sourceFileName + "\n";
+		appendStr+= createLog(0,chunk.block)
+		return appendStr;
+	}
 	createLog = function(level,block)
+	{
+		var appendString = "\n";
+		var ws = "";
+		for(var i = 0; i < level; ++i)
 		{
-			var appendString = "\n";
-			var ws = "";
-			for(var i = 0; i < level; ++i)
-			{
-				ws += "    ";
-			}
-			if(array_length(block.statements) == 0)
-			{
-				return "";	
-			}
-			for(var i = 0; i < array_length(block.statements);++i)
-			{
-				var curStatement = block.statements[i];
-				//show_debug_message(curStatement)
-				if(curStatement.astType == AST.EXPRESSION &&
-				curStatement.expressionType == Expression.FUNCTIONCALL)
-				{
-					appendString += ws + "function call: " + string(curStatement) + "\n";
-					continue;
-				}
-				switch(curStatement.statementType)
-				{
-					
-					case Statement.ASSIGNMENT:
-						appendString += ws + "names: " + string(curStatement.names) + "\n";
-						appendString += ws + "assignedExpressions: [";
-						for(var j = 0; j < array_length(curStatement.expressions);++j)
-						{
-							var curExpression = curStatement.expressions[j];
-							//show_debug_message(curExpression.expressionType == Expression.FUNCTIONBODY)
-							if(curExpression.expressionType == Expression.FUNCTIONBODY)
-							{
-								appendString += ws + "paramlist: "+ string(curExpression.paramlist) + ", "+
-								"isVarArgs: " + string(curExpression.isVarArgs);
-								appendString += self.createLog(level+1,curExpression.block)
-							}
-							else
-							{
-								appendString += ws + string(curExpression);
-							}
-							
-							if(j != array_length(curStatement.expressions) - 1)
-							{
-								appendString += ", ";
-							}
-						}
-						appendString += "]\n";
-						
-					break;
-					case Statement.DECLARATION:
-						appendString += ws + "names: " + string(curStatement.names) + ", ";
-						appendString += "attributes: " + string(curStatement.attributes) + ", ";
-						appendString += "isLocal: "  + string(curStatement.isLocal) + "\n";
-						appendString += ws + "assignedExpressions: [";
-						for(var j = 0; j < array_length(curStatement.expressions);++j)
-						{
-							var curExpression = curStatement.expressions[j];
-							//show_debug_message(curExpression.expressionType == Expression.FUNCTIONBODY)
-							if(curExpression.expressionType == Expression.FUNCTIONBODY)
-							{
-								appendString += ws + "paramlist: "+ string(curExpression.paramlist) + 
-								", isVarArgs: " + string(curExpression.isVarArgs);
-								appendString += ws + self.createLog(level+1,curExpression.block)
-							}
-							else
-							{
-								appendString += ws + string(curExpression);
-							}
-							
-							if(j != array_length(curStatement.expressions) - 1)
-							{
-								appendString += ", ";
-							}
-						}
-						appendString += "]\n";
-					break;
-					case Statement.DO:
-						appendString += self.createLog(level +1, curStatement.block)
-					break;
-					case Statement.GENERICFOR:
-						appendString += ws + "namelist :" + string(namelist);
-						appendString += " ,"
-						appendString += ws + "explist :" string(explist);
-						appendString += self.createLog(level +1, curStatement.block)
-					break;
-					case Statement.IF:
-						var conditions = curStatement.conditions
-						var blocks = curStatement.blocks;
-						for(var j = 0; j < array_length(conditions); ++j)
-						{
-							appendString += "\n" + ws + "condition" + string(j) + " :" + string(conditions[j]);
-							appendString += self.createLog(level +1, blocks[j])
-						}
-						if(array_length(blocks) > array_length(conditions))
-						{
-							appendString += self.createLog(level +1, blocks[array_length(blocks)-1])
-						}
-					break;
-					case Statement.NUMERICFOR:
-						appendString += ws + "initalName :" + curStatement.initalName;
-						appendString += " ,"
-						appendString += "inital :" +curStatement.inital;
-						appendString += " ,"
-						appendString += "limit :" + curStatement.limit;
-						appendString += " ,"
-						appendString += "step :" + curStatement.step;
-						appendString += self.createLog(level +1, curStatement.block)
-					break;
-					case Statement.REPEAT:
-						appendString += ws + "condition :" + string(curStatement.condition);
-						appendString += self.createLog(level +1, curStatement.block)
-					break;
-					case Statement.WHILE:
-						appendString += ws + "condition :" + string(curStatement.condition);
-						appendString += self.createLog(level +1, curStatement.block)
-					break;
-					default:
-						appendString += ws + string(curStatement) + "\n"
-					break
-				}
-			}
-			return appendString;
+			ws += "    ";
 		}
+		if(array_length(block.statements) == 0)
+		{
+			return "";	
+		}
+		for(var i = 0; i < array_length(block.statements);++i)
+		{
+			var curStatement = block.statements[i];
+			//show_debug_message(curStatement)
+			if(curStatement.astType == AST.EXPRESSION &&
+			curStatement.expressionType == Expression.FUNCTIONCALL)
+			{
+				appendString += ws + "function call: " + string(curStatement) + "\n";
+				continue;
+			}
+			switch(curStatement.statementType)
+			{
+					
+				case Statement.ASSIGNMENT:
+					appendString += ws + "names: " + string(curStatement.names) + "\n";
+					appendString += ws + "assignedExpressions: [";
+					for(var j = 0; j < array_length(curStatement.expressions);++j)
+					{
+						var curExpression = curStatement.expressions[j];
+						//show_debug_message(curExpression.expressionType == Expression.FUNCTIONBODY)
+						if(curExpression.expressionType == Expression.FUNCTIONBODY)
+						{
+							appendString += ws + "paramlist: "+ string(curExpression.paramlist) + ", "+
+							"isVarArgs: " + string(curExpression.isVarArgs);
+							appendString += self.createLog(level+1,curExpression.block)
+						}
+						else
+						{
+							appendString += ws + string(curExpression);
+						}
+							
+						if(j != array_length(curStatement.expressions) - 1)
+						{
+							appendString += ", ";
+						}
+					}
+					appendString += "]\n";
+						
+				break;
+				case Statement.DECLARATION:
+					appendString += ws + "names: " + string(curStatement.names) + ", ";
+					appendString += "attributes: " + string(curStatement.attributes) + "\n";
+					appendString += ws + "assignedExpressions: [";
+					for(var j = 0; j < array_length(curStatement.expressions);++j)
+					{
+						var curExpression = curStatement.expressions[j];
+						//show_debug_message(curExpression.expressionType == Expression.FUNCTIONBODY)
+						if(curExpression.expressionType == Expression.FUNCTIONBODY)
+						{
+							appendString += ws + "paramlist: "+ string(curExpression.paramlist) + 
+							", isVarArgs: " + string(curExpression.isVarArgs);
+							appendString += ws + self.createLog(level+1,curExpression.block)
+						}
+						else
+						{
+							appendString += ws + string(curExpression);
+						}
+							
+						if(j != array_length(curStatement.expressions) - 1)
+						{
+							appendString += ", ";
+						}
+					}
+					appendString += "]\n";
+				break;
+				case Statement.DO:
+					appendString += self.createLog(level +1, curStatement.block)
+				break;
+				case Statement.GENERICFOR:
+					appendString += ws + "namelist :" + string(curStatement.namelist);
+					appendString += " ,"
+					appendString += ws + "explist :" string(curStatement.explist);
+					appendString += self.createLog(level +1, curStatement.block)
+				break;
+				case Statement.IF:
+					var conditions = curStatement.conditions
+					var blocks = curStatement.blocks;
+					for(var j = 0; j < array_length(conditions); ++j)
+					{
+						appendString += "\n" + ws + "condition" + string(j) + " :" + string(conditions[j]);
+						appendString += self.createLog(level +1, blocks[j])
+					}
+					if(array_length(blocks) > array_length(conditions))
+					{
+						appendString += self.createLog(level +1, blocks[array_length(blocks)-1])
+					}
+				break;
+				case Statement.NUMERICFOR:
+					appendString += ws + "initalName :" + curStatement.initalName;
+					appendString += " ,"
+					appendString += "inital :" +string(curStatement.inital);
+					appendString += " ,"
+					appendString += "limit :" + string(curStatement.limit);
+					appendString += " ,"
+					appendString += "step :" + string(curStatement.step);
+					appendString += self.createLog(level +1, curStatement.block)
+				break;
+				case Statement.REPEAT:
+					appendString += ws + "condition :" + string(curStatement.condition);
+					appendString += self.createLog(level +1, curStatement.block)
+				break;
+				case Statement.WHILE:
+					appendString += ws + "condition :" + string(curStatement.condition);
+					appendString += self.createLog(level +1, curStatement.block)
+				break;
+				default:
+					appendString += ws + string(curStatement) + "\n"
+				break
+			}
+		}
+		return appendString;
+	}
 	
 }
 

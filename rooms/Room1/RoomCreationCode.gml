@@ -1,7 +1,7 @@
-global.GMLua.createLuaFromFile("test/test.lua");
-/*var val1 = 7
-var val2 = 3
-show_debug_message(val1 - (int64(val1/val2))*val2)*/
+var chunk = global.GMLua.createLuaFromFile("test/test1.lua");
+global.GMLua.runAST(chunk,,"test/");
+
+
 
 //show_debug_message(0/0)
 game_end();

@@ -195,6 +195,7 @@ with(global.lexer)
 	{
 		var endingVal = "";
 		var level = 0;
+		var escapes = ["a","b","f","n","r","t","v","\\","\"","'","z"]
 		if(match(["\""]))
 		{
 			endingVal = "\"";
@@ -223,7 +224,7 @@ with(global.lexer)
 			{
 				if(match(["\\"]))
 				{
-					if(!match(["a","b","f","n","r","t","v","\\","\"","'","z"]))
+					if(!match(escapes))
 					{
 						ParserException("Escape character does not have a following character",chars.line);
 					}
@@ -262,7 +263,7 @@ with(global.lexer)
 			{
 				if(match(["\\"]))
 				{
-					if(!match(["a","b","f","n","r","t","v","\\","\"","'","z"]))
+					if(!match(escapes))
 					{
 						ParserException("Escape character does not have a following character",chars.line);
 					}
@@ -301,6 +302,13 @@ with(global.lexer)
 				++index;	
 			} 
 			val = string_copy(strVal,index+1,string_length(strVal)-2*index);
+		}
+		
+		var trueEscapes = ["\a","\b","\f","\n","\r","\t","\v","\\","\"","'","z"]
+		for(var i = 0; i < array_length(escapes); ++i)
+		{
+			var fullEscape = "\\" + escapes[i];
+			val = string_replace(val,fullEscape,trueEscapes[i]);
 		}
 		token.literal = val;
 		return token;

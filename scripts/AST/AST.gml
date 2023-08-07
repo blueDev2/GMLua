@@ -44,9 +44,11 @@ function ASTExpression() constructor
 {
 	astType = AST.EXPRESSION;
 }
-function ASTChunk(globals) constructor
+function ASTChunk(block,sourceFilePath = "/",sourceFileName = "misc") constructor
 {
-	self.globals = globals;
+	self.block = block;
+	self.sourceFileName = sourceFileName;
+	self.sourceFilePath = sourceFilePath
 	astType = AST.CHUNK;
 }
 function ASTBlock(block) constructor
@@ -132,14 +134,19 @@ function ASTReturn(expressions): ASTStatement() constructor
 	statementType = Statement.RETURN;
 }
 
-function ASTDeclaration(names,attributes, expressions, isLocal): ASTStatement() constructor
+function ASTDeclaration(names,attributes, expressions): ASTStatement() constructor
 {
+	
 	self.names = names;
 	self.attributes = attributes;
 	self.expressions = expressions;
-	self.isLocal = isLocal;
 	//astType = AST.STATEMENT;
 	statementType = Statement.DECLARATION;
+	
+	/*if(typeof(names) != "array" || typeof(expressions) != "array")
+	{
+		throw(self);	
+	}*/
 }
 
 function ASTAssignment(names,expressions): ASTStatement() constructor
@@ -148,6 +155,10 @@ function ASTAssignment(names,expressions): ASTStatement() constructor
 	self.expressions = expressions;
 	
 	statementType = Statement.ASSIGNMENT;
+	if(typeof(names) != "array" || typeof(expressions) != "array")
+	{
+		throw(self);	
+	}
 
 }
 
@@ -200,18 +211,18 @@ function ASTAccess(name,expression = noone): ASTExpression()  constructor
 	expressionType = Expression.ACCESS;
 }
 
-function ASTFunctionCall(name,args,isMethod = false): ASTExpression()  constructor
+function ASTFunctionCall(name,args,finalIndex = noone): ASTExpression()  constructor
 {
 	self.name = name;	
 	self.args = args;
-	self.isMethod =isMethod;
+	self.finalIndex = finalIndex;
 	expressionType = Expression.FUNCTIONCALL;
 }
 
 function ASTTable(keys,values): ASTExpression()  constructor
 {
 	self.keys = keys;
-	self.value = values;
+	self.values = values;
 	
 	expressionType = Expression.TABLE;	
 }

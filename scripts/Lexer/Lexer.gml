@@ -140,7 +140,7 @@ with(global.lexer)
 		{
 			token.type = Token.KEYWORD;
 		}
-		if(token.literal == "and" || token.literal == "or" || token.literal == "not")
+		else if(token.literal == "and" || token.literal == "or" || token.literal == "not")
 		{
 			token.type = Token.OPERATOR;
 		}

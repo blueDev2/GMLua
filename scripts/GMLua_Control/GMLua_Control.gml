@@ -43,8 +43,13 @@ with(global.GMLua)
 		}
 		return abstractTree;
 	}
-	function runAST(abstractTree, scope = new Scope(), logFolderPath = "")
+	
+	function runAST(abstractTree, scope = new Scope(), logFolderPath )
 	{
+		if(is_undefined(logFolderPath))
+		{
+			logFolderPath = (abstractTree.sourceFilePath+"InterpreterLog_"+abstractTree.sourceFileName)
+		}
 		var newScope = global.interpreter.visitChunk(abstractTree,scope);
 		if(logmode)
 		{
@@ -52,6 +57,7 @@ with(global.GMLua)
 			file_text_write_string(f,string(newScope));
 			file_text_close(f);
 		}
+		return newScope;
 	}
 
 	function createLuaFromFile(filePath,logmode)
@@ -72,4 +78,5 @@ with(global.GMLua)
 	{
 		return lexAndParse(str,logmode);
 	}
+	
 }

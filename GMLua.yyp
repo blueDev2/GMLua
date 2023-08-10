@@ -34,6 +34,7 @@
     "IDEVersion": "2023.6.0.92",
   },
   "resources": [
+    {"id":{"name":"Lua_test_object","path":"objects/Lua_test_object/Lua_test_object.yy",},},
     {"id":{"name":"AST","path":"scripts/AST/AST.yy",},},
     {"id":{"name":"GMLua_Library","path":"scripts/GMLua_Library/GMLua_Library.yy",},},
     {"id":{"name":"Enviorment","path":"scripts/Enviorment/Enviorment.yy",},},

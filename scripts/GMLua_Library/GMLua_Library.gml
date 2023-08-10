@@ -10,14 +10,16 @@ with(global.LuaLibrary)
 		LuaToLuaFunctions = {};
 		GMLtoGMLfunctions.print = function()
 		{
+			var printStr = "";
 			for(var i = 0; i < argument_count; ++i)
 			{
 				if(argument[i] == undefined)
 				{
 					continue;
 				}
-				show_debug_message(argument[i]);
+				printStr += (string(argument[i]) + "    ")
 			};
+			show_debug_message(printStr)
 		}
 		LuaToLuaFunctions.setmetatable = function(table,metatable)
 		{

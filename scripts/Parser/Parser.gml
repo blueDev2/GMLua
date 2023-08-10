@@ -113,25 +113,27 @@ with(global.parser)
 				//show_debug_message(statements);
 				ParserException(string(tokens.get(0)) + "is not a start of a statement",tokens.get(0).line)
 			}
-			if(newAST.astType == AST.STATEMENT && newAST.statementType == Statement.GOTO)
+			if(newAST.astType == AST.STATEMENT && newAST.statementType == Statement.LABEL)
 			{
-				var labelName = newAST.labelName;
+				var labelName = newAST.name;
 				if(!variable_struct_exists(gotoIndices,labelName))
 				{
 					variable_struct_set(gotoIndices,labelName,array_length(statements));
 				}
 				else
 				{
-					ParserException("Duplicate label name: " + labelName,tokens.get(-1).line)
+					ParserException("Duplicate label name in the same block: " + labelName,tokens.get(-1).line)
 				}
 			}
-			
-			newAST.firstLine = curLine;
-			array_push(statements,newAST);
+			else
+			{
+				newAST.firstLine = curLine;
+				array_push(statements,newAST);
+			}
 			while(match(";"))
 			{}
 		}
-		var newBlock = new ASTBlock(statements);
+		var newBlock = new ASTBlock(statements,gotoIndices);
 		newBlock.firstLine = -1;
 		if(array_length(statements) > 0)
 		{
@@ -564,7 +566,7 @@ with(global.parser)
 		if(level == 10)
 		{
 			var operator = noone;
-			if(peek(operatorPrecedence[level]))
+			if(peek(operatorPrecedence[level])&& peek(Token.OPERATOR))
 			{
 				operator= tokens.get(0).literal;
 				tokens.advance();
@@ -577,7 +579,7 @@ with(global.parser)
 			return new ASTUniop(operator,first);	
 		}
 		var first = parseExpressionTerm(level+1);
-		if(peek(operatorPrecedence[level]))
+		if(peek(operatorPrecedence[level])&& peek(Token.OPERATOR))
 		{
 			var operator = tokens.get(0).literal;
 			tokens.advance();
@@ -586,7 +588,7 @@ with(global.parser)
 
 			firstSide = new ASTBinop(operator,first,second);
 			
-			return helpParseExpressionTerm(firstSide,level);
+			first = helpParseExpressionTerm(firstSide,level);
 		}
 		return first;
 	}
@@ -598,7 +600,7 @@ with(global.parser)
 			return parsePrimaryExpression();	
 		}
 
-		if(peek(operatorPrecedence[level]))
+		while(peek(operatorPrecedence[level])&& peek(Token.OPERATOR))
 		{
 			var operator = tokens.get(0).literal;
 			tokens.advance();
@@ -608,11 +610,11 @@ with(global.parser)
 			if(level == 11 || level == 7)
 			{
 				firstSide.second = new ASTBinop(operator,firstSide.second,second);
-				return firstSide
+				//return firstSide
 			}
 			else
 			{
-				return new ASTBinop(operator,firstSide,second);
+				firstSide = new ASTBinop(operator,firstSide,second);
 			}
 		}
 		return firstSide;
@@ -735,6 +737,7 @@ with(global.parser)
 		}
 		
 	}
+	
 	parsePrefixExpression = function(prefix = noone)
 	{
 		if(prefix == noone)

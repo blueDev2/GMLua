@@ -3,8 +3,12 @@
 
 //This is to allow an inderect call to a function using an array of arguments
 //and a reference to the function
+
 //This is really ugly and there may be a better way, but I have not found it
 //9 Arguments allowed MAX. An error is thrown otherwise
+
+//As an aside, probably should not be using more than 9 arguements in
+//a function call anyways
 function callFunction(functionRef, arguments)
 {
 	if(array_length(arguments) > 10)
@@ -25,7 +29,7 @@ function callFunction(functionRef, arguments)
 // the same interface. getValue() must always suceed, but setValue()
 // may fail.
 // NOT AN ENVIORMENT TYPE. Just a useful struct of interpreter's interal
-// logic when peforming visit calls.
+// logic when peforming visit calls. 
 function Reference(container,key = undefined, checkExistance = true) constructor
 {
 	self.container = container;

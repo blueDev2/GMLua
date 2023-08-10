@@ -8,7 +8,7 @@ with(global.interpreter)
 	//Variables that are currently available
 	currentScope = new Scope(globalScope);
 	
-	traceback = [];
+	//traceback = [];
 
 	function visitChunk(chunk, scope = new Scope(noone), addBasicLibrary = true)
 	{
@@ -25,9 +25,34 @@ with(global.interpreter)
 
 	function helpVisitBlock(block)
 	{
-		for(var i = 0; i < array_length(block.statements); ++i)
+		var i = 0;
+		while(i < array_length(block.statements))
 		{
-			visitStatement(block.statements[i]);
+			try
+			{
+				for(; i < array_length(block.statements); ++i)
+				{
+					visitStatement(block.statements[i]);
+				}
+			}
+			catch(e)
+			{
+				if(e.type == ExceptionType.JUMP)
+				{
+					if(variable_struct_exists(block.gotoIndices,e.value))
+					{
+						i = block.gotoIndices[$e.value];
+					}
+					else
+					{
+						throw(e)
+					}
+				}
+				else
+				{
+					throw(e)	
+				}
+			}
 		}
 	}
 	
@@ -341,7 +366,7 @@ with(global.interpreter)
 	//Disabled until I can figure out how to deal with scope
 	visitGoto = function(visitor)
 	{
-		
+		JumpException(visitor)
 	}
 	visitIf = function(visitor)
 	{
@@ -375,10 +400,10 @@ with(global.interpreter)
 			}
 		}
 	}
-	//Just do nothing
+	//Should be impossible
 	visitLabel = function(visitor)
 	{
-		
+		InterpreterException("A label has been visted, there is an issue with the interpreter");
 	}
 	visitRepeat = function(visitor)
 	{
@@ -476,7 +501,12 @@ with(global.interpreter)
 	{
 		if(visitor.expression == noone)
 		{
-			return currentScope.getVariable(visitor.name);
+			var retExp = currentScope.getVariable(visitor.name);
+			if(retExp.getValue().type == LuaTypes.EXPLIST)
+			{
+				retExp = retExp.getValue().getValue();
+			}
+			return retExp;
 		}
 		var curName = visitExpression(visitor.name);
 		var curExp = visitExpression(visitor.expression);
@@ -499,18 +529,31 @@ with(global.interpreter)
 		{
 			key = curExpExpression;
 			tableRef = curNameExpression;
+			//This is here so the customReference will use
+			//callMetamethod in the right (GML) scope
+			interpreter = other;
 			getValue = function()
 			{
 				var rawValExpression = tableRef.getValue(key);
-				if(rawValExpression == undefined)
+				if(rawValExpression.type == LuaTypes.NIL)
 				{
-					//rawValExpression = callMetamethod("[]",curNameExpression,curExpExpression);
+					rawValExpression = interpreter.callMetamethod("[]",tableRef,key);
 				}
 				return rawValExpression;
 			}
 			setValue = function(newVal)
 			{
-				tableRef.setValue(key,newVal);
+				var rawValExpression = tableRef.getValue(key);
+				if(tableRef.metatable != noone && 
+				tableRef.metatable.getValueFromVal("__newindex") != undefined  && 
+				rawValExpression.type == LuaTypes.NIL)
+				{
+					rawValExpression = interpreter.callMetamethod("=[]",tableRef,key,newVal);
+				}
+				else
+				{
+					tableRef.setValue(key,newVal);
+				}
 			}
 		}
 		return customReference;
@@ -567,7 +610,7 @@ with(global.interpreter)
 		}
 		else
 		{
-				funcBodyExp = funcBody.getValue();
+			funcBodyExp = funcBody.getValue();
 		}
 		var ASTArgs = visitor.args;
 		for(var i = 0; i < array_length(ASTArgs); ++i)
@@ -623,6 +666,7 @@ with(global.interpreter)
 			try
 			{
 				helpVisitBlock(block);
+				return new Reference(new simpleValue(undefined));
 			}
 			catch(e)
 			{
@@ -630,7 +674,7 @@ with(global.interpreter)
 				{
 					throw(e);
 				}
-				if(e.type == ExceptionType.BREAK)
+				if(e.type == ExceptionType.BREAK || e.type == ExceptionType.JUMP)
 				{
 					e.type = ExceptionType.UNCATCHABLE;
 				}
@@ -667,7 +711,7 @@ with(global.interpreter)
 		}
 		else if(funcBodyExp.type == LuaTypes.TABLE)
 		{
-			callMetamethod("()",expArgs);
+			callMetamethod("()",funcBodyExp,expArgs);
 		}
 		else
 		{
@@ -762,10 +806,7 @@ with(global.interpreter)
 		var exp2Val = exp2.val;
 		
 
-		static MetamethodFailureException = function(exp1,exp2,op)
-		{
-			InterpreterException("Failed to find an appropriate metamethod for " + string(exp1) + " and " + string(exp2) +"\nUnder the operator: " + op);
-		}
+
 		static ArithmetricExecute = function(exp1, exp2, case1Function, case2Function = noone)
 		{
 			if(case2Function == noone)
@@ -846,10 +887,10 @@ with(global.interpreter)
 				if(retExp == noone)
 				{
 					retExp = callMetamethod(op, exp1, exp2);
-					if(retExp == noone)
+					/*if(retExp == noone)
 					{
 						MetamethodFailureException(op, exp1, exp2);
-					}
+					}*/
 				}
 				return retExp;
 			}
@@ -888,10 +929,10 @@ with(global.interpreter)
 					{
 						retExp = callMetamethod(op, exp1);
 					}
-					if(retExp == noone)
+					/*if(retExp == noone)
 					{
 						MetamethodFailureException(op, exp1, exp2);
-					}
+					}*/
 				}
 				return retExp;
 			}
@@ -910,10 +951,10 @@ with(global.interpreter)
 				if(retExp == noone)
 				{
 					retExp = callMetamethod(op, exp1, exp2);
-					if(retExp == noone)
+					/*if(retExp == noone)
 					{
 						MetamethodFailureException(op, exp1, exp2);
-					}
+					}*/
 				}
 				return retExp;
 			}
@@ -929,10 +970,10 @@ with(global.interpreter)
 				if(retExp == noone)
 				{
 					retExp = callMetamethod(op, exp1, exp2);
-					if(retExp == noone)
+					/*if(retExp == noone)
 					{
 						MetamethodFailureException(op, exp1, exp2);
-					}
+					}*/
 				}
 				return retExp;
 			}
@@ -951,10 +992,10 @@ with(global.interpreter)
 				if(retExp == noone)
 				{
 					retExp = callMetamethod(op, exp1, exp2);
-					if(retExp == noone)
+					/*if(retExp == noone)
 					{
 						MetamethodFailureException(op, exp1, exp2);
-					}
+					}*/
 				}
 				return retExp;
 			}
@@ -974,10 +1015,10 @@ with(global.interpreter)
 				if(retExp == noone)
 				{
 					retExp = callMetamethod(op, exp1, exp2);
-					if(retExp == noone)
+					/*if(retExp == noone)
 					{
 						MetamethodFailureException(op, exp1, exp2);
-					}
+					}*/
 				}
 				return retExp;
 			}
@@ -988,15 +1029,15 @@ with(global.interpreter)
 				if((exp1.type == LuaTypes.INTEGER || exp1.type == LuaTypes.FLOAT) &&
 				(exp2.type == LuaTypes.INTEGER || exp2.type == LuaTypes.FLOAT))
 				{
-					retExp = new simpleValue(power(real(val1), real(val2)));
+					retExp = new simpleValue(power(real(exp1Val), real(exp2Val)));
 				}
 				if(retExp == noone)
 				{
 					retExp = callMetamethod(op, exp1, exp2);
-					if(retExp == noone)
+					/*if(retExp == noone)
 					{
 						MetamethodFailureException(op, exp1, exp2);
-					}
+					}*/
 				}
 				return retExp;
 			}
@@ -1012,10 +1053,10 @@ with(global.interpreter)
 				if(retExp == noone)
 				{
 					retExp = callMetamethod(op, exp1, exp2);
-					if(retExp == noone)
+					/*if(retExp == noone)
 					{
 						MetamethodFailureException(op, exp1, exp2);
-					}
+					}*/
 				}
 				return retExp;
 			}
@@ -1030,10 +1071,10 @@ with(global.interpreter)
 				if(retExp == noone)
 				{
 					retExp = callMetamethod(op, exp1, exp2);
-					if(retExp == noone)
+					/*if(retExp == noone)
 					{
 						MetamethodFailureException(op, exp1, exp2);
-					}
+					}*/
 				}
 				return retExp;
 			}
@@ -1068,10 +1109,10 @@ with(global.interpreter)
 					{
 						retExp = callMetamethod(op, exp1);	
 					}
-					if(retExp == noone)
+					/*if(retExp == noone)
 					{
 						MetamethodFailureException(op, exp1, exp2);
-					}
+					}*/
 				}
 				return retExp;
 			}
@@ -1086,10 +1127,10 @@ with(global.interpreter)
 				if(retExp == noone)
 				{
 					retExp = callMetamethod(op, exp1, exp2);
-					if(retExp == noone)
+					/*if(retExp == noone)
 					{
 						MetamethodFailureException(op, exp1, exp2);
-					}
+					}*/
 				}
 				return retExp;
 			}
@@ -1104,10 +1145,10 @@ with(global.interpreter)
 				if(retExp == noone)
 				{
 					retExp = callMetamethod(op, exp1, exp2);
-					if(retExp == noone)
+					/*if(retExp == noone)
 					{
 						MetamethodFailureException(op, exp1, exp2);
-					}
+					}*/
 				}
 				return retExp;
 			}
@@ -1132,7 +1173,7 @@ with(global.interpreter)
 						{
 							retExp = callMetamethod(op, exp1,exp2);
 						}
-						if(retExp.val == noone)
+						if(retExp.val == undefined)
 						{
 							retExp = new simpleValue(false);
 						}
@@ -1146,10 +1187,10 @@ with(global.interpreter)
 						retExp = new simpleValue(exp1.val == exp2.val);
 					}
 				}
-				if(retExp == noone)
+				/*if(retExp == noone)
 				{
 					MetamethodFailureException(op, exp1, exp2);
-				}
+				}*/
 				if(negateFinal)
 				{
 					retExp.val = !retExp.val;
@@ -1167,10 +1208,10 @@ with(global.interpreter)
 					return new simpleValue(exp1Val < exp2Val);
 				}
 				retExp = callMetamethod(op,exp1,exp2);
-				if(retExp == noone)
+				/*if(retExp == noone)
 				{
 					MetamethodFailureException(op, exp1, exp2);
-				}
+				}*/
 				return retExp;
 			}
 			break;
@@ -1184,10 +1225,10 @@ with(global.interpreter)
 					return new simpleValue(exp1Val <= exp2Val);
 				}
 				retExp = callMetamethod(op,exp1,exp2);
-				if(retExp == noone)
+				/*if(retExp == noone)
 				{
 					MetamethodFailureException(op, exp1, exp2);
-				}
+				}*/
 				return retExp;
 			}
 			break;
@@ -1208,18 +1249,21 @@ with(global.interpreter)
 			{
 				var retExp = noone;
 				var isExp1Stringable = (exp1.type == LuaTypes.INTEGER) || (exp1.type == LuaTypes.FLOAT) || (exp1.type == LuaTypes.STRING);
-				var isExp2Stringable = (exp2.type == LuaTypes.INTEGER) || (exp2.type == LuaTypes.FLOAT)|| (exp1.type == LuaTypes.STRING);
+				var isExp2Stringable = (exp2.type == LuaTypes.INTEGER) || (exp2.type == LuaTypes.FLOAT) || (exp2.type == LuaTypes.STRING);
 				if(isExp1Stringable && isExp2Stringable)
 				{
 					exp1Val = string(exp1Val);
 					exp2Val = string(exp2Val);
 					return new simpleValue(exp1Val + exp2Val)
 				}
-				retExp = callMetamethod(op,exp1,exp2);
-				if(retExp == noone)
+				else
+				{
+					retExp = callMetamethod(op,exp1,exp2);
+				}
+				/*if(retExp == noone)
 				{
 					MetamethodFailureException(op, exp1, exp2);
-				}
+				}*/
 				return retExp;
 			}
 			break;
@@ -1233,27 +1277,23 @@ with(global.interpreter)
 				}
 				else if (exp1.type == LuaTypes.TABLE)
 				{
-					return new simpleValue(variable_struct_names_count(exp1Val))	
+					if(exp1.metatable != noone)
+					{
+						retExp = callMetamethod(op,exp1,exp2);
+					}
+					retExp = new simpleValue(variable_struct_names_count(exp1Val))	
 				}
-				else
-				{
-					retExp = callMetamethod(op,exp1,exp2);
-				}
+
 				
-				if(retExp == noone)
+				/*if(retExp == noone)
 				{
 					MetamethodFailureException(op, exp1, exp2);
-				}
+				}*/
 				return retExp;
 			}
 			break;
-			case "...":
-			{
-				return currentScope.getVariable("...").getValue();
-			}
-			break;
 		}
-		throw("This statement should be impossible to reach, check the preceding switch statement");
+		InterpreterException("This statement should be impossible to reach, check the preceding switch statement");
 	}
 	
 	//expectedArity must be more than 0 or -1
@@ -1359,38 +1399,241 @@ with(global.interpreter)
 		return retExpList;
 	}
 	
-	//This may return "noone", helpVisitOp must deal with that value
-	//Otherwise, this must return an expression
-	//Metamethods are not currently working
-	function callMetamethod(op, exp1, exp2 = noone)
+	//This must return an expression
+	function callMetamethod(op, exp1, exp2 = noone, exp3 = noone)
 	{
-		throw("Incomplete feature, the use of metamethods (currently) is disallowed")
-		if(exp1.type = LuaTypes.TABLE)
+		static opToMetaIndexFactory = function()
 		{
-			switch(op)
+			var opToMetaValue = {}
+			opToMetaValue[$"+"] = "__add";
+			opToMetaValue[$"-"] = ["__sub","__unm"];
+			opToMetaValue[$"*"] = "__mul";
+			opToMetaValue[$"/"] = "__div";
+			opToMetaValue[$"%"] = "__mod";
+			opToMetaValue[$"^"] = "__pow";
+			opToMetaValue[$"//"] = "__idiv";
+			opToMetaValue[$"&"] = "__band";
+			opToMetaValue[$"|"] = "__bor";
+			opToMetaValue[$"~"] = ["__bxor","__bnot"];
+			opToMetaValue[$"<<"] = "__shl";
+			opToMetaValue[$">>"] = "__shr";
+			opToMetaValue[$".."] = "__concat";
+			opToMetaValue[$"#"] = "__len";
+			opToMetaValue[$"=="] = "__eq";
+			opToMetaValue[$"<"] = "__lt";
+			opToMetaValue[$"<="] = "__le";
+			opToMetaValue[$"[]"] = "__index";
+			opToMetaValue[$"=[]"] = "__newindex";
+			opToMetaValue[$"()"] = "__call";
+			return opToMetaValue;
+		};
+		static opToMetaIndex = opToMetaIndexFactory();
+		static MetamethodFailureException = function(op,exp1,exp2)
+		{
+			InterpreterException("Failed to find an appropriate metamethod for " + string(exp1) + " and " + string(exp2) +"\nUnder the operator: " + op);
+		}
+		//throw("Incomplete feature, the use of metamethods (currently) is disallowed")
+		switch(op)
+		{
+			case "[]":
 			{
-				//Index
-				case "[]":
-			
-				break;
-				//New Index
-				case "=[]":
+				if(exp1.metatable == noone)
+				{
+					MetamethodFailureException(op,exp1,exp2)
+				}
+				var metaIndexExp = new simpleValue(opToMetaIndex[$op]);
+				var metaValue = exp1.metatable.getValue(metaIndexExp);
 				
-				break;
-				//Call
-				case "()":
-			
-				break;	
+				var retExpRef = noone;
+				
+				currentScope = new Scope(currentScope)
+				currentScope.setLocalVariable("0_table",metaValue);
+				currentScope.setLocalVariable("0_originalTable",exp1);
+				currentScope.setLocalVariable("0_key",exp2);
+				if(metaValue.type == LuaTypes.TABLE)
+				{
+					var ASTtable = new ASTAccess("0_table");
+					var ASTkey = new ASTAccess("0_key")
+					
+					retExpRef = visitAccess(new ASTAccess(ASTtable,ASTkey));
+				}
+				else if(metaValue.type == LuaTypes.FUNCTION ||
+				metaValue.type == LuaTypes.GMFUNCTION)
+				{
+					var ASTtable = new ASTAccess("0_table");
+					var ASToriginalTable = new ASTAccess("0_originalTable");
+					var ASTkey = new ASTAccess("0_key");
+					
+					retExpRef = visitFunctionCall(
+					new ASTFunctionCall(ASTtable,[ASToriginalTable,ASTkey]))
+				}
+				else
+				{
+					MetamethodFailureException(op,exp1,exp2)
+				}
+				currentScope = currentScope.parent
+				return retExpRef.getValue();
 			}
+			break;
+			case "=[]":
+			{
+				if(exp1.metatable == noone)
+				{
+					MetamethodFailureException(op,exp1,exp2)
+				}
+				var metaIndexExp = new simpleValue(opToMetaIndex[$op]);
+				var metaValue = exp1.metatable.getValue(metaIndexExp);
+				
+				var retExpRef = noone;
+				currentScope = new Scope(currentScope)
+				currentScope.setLocalVariable("0_table",metaValue);
+				currentScope.setLocalVariable("0_originalTable",exp1);
+				currentScope.setLocalVariable("0_key",exp2);
+				currentScope.setLocalVariable("0_newVal",exp3);
+				if(metaValue.type == LuaTypes.TABLE)
+				{
+					var ASTtable = new ASTAccess("0_table");
+					var ASTKey = new ASTAccess("0_key");
+					
+					var ASTLeftSide = new ASTAccess(ASTtable, ASTKey)
+					var ASTRightSide = new ASTAccess("0_newVal");
+					
+					visitAssignment(new ASTAssignment([ASTLeftSide],[ASTRightSide]))
+				}
+				else if(metaValue.type == LuaTypes.FUNCTION ||
+				metaValue.type == LuaTypes.GMFUNCTION)
+				{
+					var ASTarg1 = new ASTAccess("0_originalTable");
+					var ASTarg2 = new ASTAccess("0_key");
+					var ASTarg3 = new ASTAccess("0_newVal");
+					
+					var ASTfunc = new ASTAccess("0_table");
+					visitFunctionCall(new ASTFunctionCall(ASTfunc,
+					[ASTarg1,ASTarg2,ASTarg3]));
+				}
+				else
+				{
+					MetamethodFailureException(op,exp1,exp2)
+				}
+				currentScope = currentScope.parent;
+				return noone;
+			}
+			break;
+			case "()":
+			{
+				if(exp1.metatable == noone)
+				{
+					MetamethodFailureException(op,exp1,exp2)
+				}
+				var metaIndexExp = new simpleValue(opToMetaIndex[$op]);
+				var metaValue = exp1.metatable.getValue(metaIndexExp);
+				
+				currentScope = new Scope(currentScope)
+				var allArgExps =  helpPruneExpList([exp1,exp2],-1);
+				currentScope.setLocalVariable("0_func",metaValue);
+				//currentScope.setLocalVariable("0_originalTable",exp1);
+				currentScope.setLocalVariable("0_argExps",new ExpressionList(allArgExps,false));
+				var retVal = new simpleValue(undefined);
+				if(metaValue.type == LuaTypes.FUNCTION ||
+				metaValue.type == LuaTypes.GMFUNCTION)
+				{
+					var ASTfunc = new ASTAccess("0_func");
+					var ASTArgs = new ASTAccess("0_argExps");
+					//TODO: Args need to be spread out as individual vals
+					retVal = visitFunctionCall(new ASTFunctionCall(ASTfunc,[ASTArgs]));
+				}
+				else
+				{
+					MetamethodFailureException(op,exp1,exp2)
+				}
+				currentScope = currentScope.parent;
+				return retVal.getValue()
+			}
+			break;
+
+			default:
+			{
+				var metaIndex = opToMetaIndex[$op];
+				var isBinary = (exp2 != noone);
+				if(op == "-")
+				{
+					if(isBinary)
+					{
+						op = op[0]
+					}
+					else
+					{
+						op = op[1]
+					}
+				}
+				else if(op == "~")
+				{
+					if(isBinary)
+					{
+						op = op[0]
+					}
+					else
+					{
+						op = op[1]
+					}
+				}
+				var metaIndexExp = new simpleValue(metaIndex);
+				var metaValue = noone;
+				var tableWithMetatable = noone;
+				if(isBinary)
+				{
+					if(exp1.type == LuaTypes.TABLE && exp1.metatable != noone)
+					{
+						tableWithMetatable = exp1;
+					}
+					else if(exp2.type == LuaTypes.TABLE && exp2.metatable != noone)
+					{
+						tableWithMetatable = exp2;
+					}
+				}
+				else
+				{
+					if(exp1.type == LuaTypes.TABLE && exp1.metatable != noone)
+					{
+						tableWithMetatable = exp1;
+					}
+				}
+				if(tableWithMetatable == noone)
+				{
+					MetamethodFailureException(op,exp1,exp2);
+				}
+				metaValue = tableWithMetatable.metatable.getValue(metaIndexExp);
+				if(metaValue.type != LuaTypes.FUNCTION &&
+				metaValue.type != LuaTypes.GMFUNCTION )
+				{
+					MetamethodFailureException(op,exp1,exp2);
+				}
+				currentScope = new Scope(currentScope);
+				currentScope.setLocalVariable("0_exp1",exp1);
+				currentScope.setLocalVariable("0_exp2",exp2);
+				currentScope.setLocalVariable("0_func", metaValue);
+				var ASTArgs = [new ASTAccess("0_exp1")];
+				if(isBinary)
+				{
+					array_push(ASTArgs,new ASTAccess("0_exp2"));
+				}
+				var ASTfuncExp = new ASTFunctionCall(new ASTAccess("0_func"),
+				ASTArgs);
+				var result = helpPruneExpList(visitFunctionCall(ASTfuncExp));
+				currentScope = currentScope.parent;
+				if(op == "==" || op == "<" || op == "<=")
+				{
+					if(isExpressionFalsy(result))
+					{
+						return new simpleValue(false)
+					}
+					return new simpleValue(true)
+				}
+				return result.getValue();
+			}
+			break;
 		}
-		else if(exp2 != noone && exp2.type = LuaTypes.TABLE)
-		{
-			
-		}
-		else
-		{
-			InterpreterException("No metamethod is provided for " + op);	
-		}
+		InterpreterException("This statement should be impossible to reach, check the preceding switch statement");
 	}
 	
 }

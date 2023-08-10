@@ -51,9 +51,10 @@ function ASTChunk(block,sourceFilePath = "/",sourceFileName = "misc") constructo
 	self.sourceFilePath = sourceFilePath
 	astType = AST.CHUNK;
 }
-function ASTBlock(block) constructor
+function ASTBlock(block,gotoIndices) constructor
 {
 	self.statements = block;
+	self.gotoIndices = gotoIndices;
 	astType = AST.BLOCK
 }
 

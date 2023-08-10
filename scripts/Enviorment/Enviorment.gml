@@ -90,6 +90,8 @@ function luaFunction(ASTFunc,scope) : valueParent() constructor
 	}
 }
 
+//GMLtoGML functions take GML and return GML values
+//LuaToLua will return expression structs
 function GMFunction(funcRef,isGMLtoGML = true) :  valueParent() constructor
 {
 	self.val = funcRef;
@@ -122,10 +124,17 @@ function Thread(func) :  valueParent() constructor
 	}
 }
 
-function ExpressionList(arrOfRefs) :  valueParent() constructor
+function ExpressionList(arrOfLuaitems,areRefs = false) :  valueParent() constructor
 {
-	val = arrOfRefs;
 	type = LuaTypes.EXPLIST;
+	if(!areRefs)
+	{
+		for(var i = 0; i < array_length(arrOfLuaitems); ++i)
+		{
+			arrOfLuaitems[i] = new Reference(arrOfLuaitems[i]);
+		}
+	}
+	val = arrOfLuaitems;
 	getValue = function()
 	{
 		return val;
@@ -133,16 +142,26 @@ function ExpressionList(arrOfRefs) :  valueParent() constructor
 	setValue = function(newVal)
 	{
 		val = newVal;
-	}
+	}/*
+	toString = function()
+	{
+		return "{ type: " + type + ", val: "+string(val) + "}"
+	}*/
 }
 
 //newAnalogousObject must be a struct or instance
 //getValue and setValue expect and return expression, 
 //so a table may act as a reference in the interpreter.
+
+//Tables are not required to be "consistent" at all times
+//When a expression is requested, inconsistenies between
+//val and analogousObject are fixed in favor of the latter
 function Table(newVal = {}, newAnalogousObject = {}) constructor
 {
+	//Must be a struct
 	val = newVal;
 	type = LuaTypes.TABLE;
+	//Must be a struct or instance
 	analogousObject = newAnalogousObject;
 	self.UID = createUniqueRefID();
 	metatable = noone;
@@ -159,12 +178,13 @@ function Table(newVal = {}, newAnalogousObject = {}) constructor
 		var expression = val[$key];	
 		
 		//Peform checks in case the analogousObject was changed in GML
-		if(struct_exists(analogousObject,key))
+		var refToValue = (new Reference(analogousObject,key,false));
+		var analogousItem = refToValue.getValue();
+		if(analogousItem != undefined)
 		{
-			var analogousItem = analogousObject[$key];
 			var gmlType = typeof(analogousItem);
 			var needsUpdate = false;
-			if(type == "struct" || type == "ref")
+			if(gmlType == "struct" || gmlType == "ref")
 			{
 				if(is_undefined(expression))
 				{
@@ -200,6 +220,22 @@ function Table(newVal = {}, newAnalogousObject = {}) constructor
 					}
 				}
 			}
+			else
+			{
+				
+				if(expression == undefined)
+				{
+					val[$key] = luaReference(analogousObject,key);
+					expression = val[$key];	
+				}
+				else if(expression.type != LuaTypes.REFERENCE)
+				{
+					val[$key] = luaReference(analogousObject,key);
+					expression = val[$key];	
+				}
+			}
+			//Peforms updates if the analogousItem indicates it contains
+			//a by-reference expression 
 			if(needsUpdate)
 			{
 				val[$key] = GMLToLua(analogousItem)
@@ -222,9 +258,16 @@ function Table(newVal = {}, newAnalogousObject = {}) constructor
 		}
 		throw("Error found, expression type within table is unexpected")
 	}
+	getValueFromVal = function(GMLkey)
+	{
+		GMLkey = LuaToHash(new simpleValue(GMLkey))
+		return val[$GMLkey];
+	}
+	
 	setValue = function(key,newVal)
 	{
 		key = LuaToHash(key);
+		var refToValue = (new Reference(analogousObject,key,false));
 		if(key == "undefined")
 		{
 			InterpreterException("Attempted to index a table with nil")
@@ -235,20 +278,22 @@ function Table(newVal = {}, newAnalogousObject = {}) constructor
 			switch(newVal.type)
 			{
 				case LuaTypes.GMFUNCTION:
-				analogousObject[$key] = newVal.val;
+				refToValue.setValue(newVal.val);
 				case LuaTypes.TABLE:
-				analogousObject[$key] = newVal.analogousObject;
+				refToValue.setValue(newVal.analogousObject);
+				default:
+				refToValue.setValue(undefined);
 			}
 		}
 		//newVal is a non-reference expression, which will be saved using reference expression that
 		//points to the analagous object.
 		else
 		{
-			var refToValue = (new Reference(analogousObject,key,false));
 			refToValue.setValue(LuaToGML(newVal));
 			val[$key] = new luaReference(analogousObject,key);
 		}
 	}
+
 	toString = function()
 	{
 		var str =  "{analogousObject: " +string(analogousObject)+", UID: "
@@ -315,12 +360,30 @@ function LuaToHash(luaItem)
 		}
 		case (LuaTypes.STRING):
 		{
-			return luaItem.val;	
+			return "String_"+luaItem.val;	
 		}
-		default:
+		case (LuaTypes.NIL):
 		{
-			return string(luaItem.val);
+			return "Nil"
 		}
+		case (LuaTypes.BOOLEAN):
+		{
+			if(luaItem.val)
+			{
+				return "Boolean_True";
+			}
+			return "Boolean_False"
+		}
+		case (LuaTypes.INTEGER):
+		{
+			return "Number_" + string(luaItem.val);
+		}
+		case (LuaTypes.FLOAT):
+		{
+			return "Number_" + string(luaItem.val);
+		}
+
+		InterpreterException("LuaItem is non-hashable (Likely an issue with Table)")
 	}
 }
 
@@ -345,12 +408,6 @@ function GMLToLua(gmlItem)
 	else if(type == "struct" || type == "ref")
 	{
 		var newTable = new Table({},gmlItem);
-		var tableKeys = variable_struct_get_names(gmlItem);
-		for(var i = 0; i < array_length(tableKeys); ++i)
-		{
-			var curKey = tableKeys[i]
-			newTable.setValue(GMLToLua(curKey), GMLToLua(gmlItem[$curKey]));
-		}
 		return newTable;
 	}
 	InterpreterException("Failed to change a GML value to lua");

@@ -9,7 +9,8 @@ enum ExceptionType
 {
 	RETURN,
 	BREAK,
-	UNCATCHABLE
+	UNCATCHABLE,
+	JUMP
 }
 
 //Return or Break exceptions should be converted to Uncatchable
@@ -28,4 +29,9 @@ function ReturnException(expression)
 function BreakException()
 {
 	throw({type: ExceptionType.BREAK,value: "Break statement outside of a loop"});
+}
+
+function JumpException(ASTgoto)
+{
+	throw({type: ExceptionType.JUMP,value: ASTgoto.labelName ,msg: "Goto: "+ ASTgoto.labelName+" cannot find a visible label"});
 }

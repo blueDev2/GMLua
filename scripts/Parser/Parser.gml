@@ -37,9 +37,9 @@ with(global.parser)
 		while(!peek(["end","until","elseif","else"]) && tokens.has(0))
 		{
 			var newAST = undefined;
-			var curLine = tokens.get(0).line;
 			while(match(";"))
 			{}
+			var curLine = tokens.get(0).line;
 			
 			if(peek(Token.IDENTIFIER))
 			{
@@ -389,6 +389,7 @@ with(global.parser)
 	
 	parseFunctionBody = function(parameters = [])
 	{
+		var firstLine = tokens.get(0).line;
 		var varargs = false;
 		if(!match("("))
 		{
@@ -433,7 +434,7 @@ with(global.parser)
 		{
 			ParserException("Missing \"end\" for function body",tokens.get(-1).line);	
 		}
-		return new ASTFunctionBody(parameters,varargs,block);
+		return new ASTFunctionBody(parameters,varargs,block,firstLine);
 	}
 	
 	parseLocalDeclaration = function()
@@ -882,6 +883,7 @@ with(global.parser)
 		{
 			ParserException("Parser Issue, please check parseTableConstructor function",tokens.get(-1).line);
 		}
+		var lastAutoIndex = -1;
 		if(!peek("}"))
 		{
 			var index = 1;
@@ -915,12 +917,13 @@ with(global.parser)
 			{
 				array_push(keys, new ASTLiteral(index));
 				array_push(values, exp1);
+				lastAutoIndex = array_length(keys)-1;
 				index++;
 			}
 			if(peek([",",";"]) && peek("}",1))
 			{
 				tokens.advance(2);
-				return new ASTTable(keys,values);
+				return new ASTTable(keys,values,lastAutoIndex);
 			}
 			while(match([",",";"]))
 			{
@@ -952,6 +955,7 @@ with(global.parser)
 				{
 					array_push(keys, new ASTLiteral(index));
 					array_push(values, exp1);
+					lastAutoIndex = array_length(keys)-1;
 					index++;
 				}
 			}
@@ -963,7 +967,7 @@ with(global.parser)
 			//show_debug_message(tokens.get(0))
 			ParserException("Missing \"}\" for table constructor",tokens.get(-1).line);	
 		}
-		return new ASTTable(keys,values);
+		return new ASTTable(keys,values,lastAutoIndex);
 	}
 	
 	setIndex = function(index)

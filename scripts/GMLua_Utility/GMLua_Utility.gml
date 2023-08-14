@@ -5,23 +5,19 @@
 //and a reference to the function
 
 //This is really ugly and there may be a better way, but I have not found it
-//9 Arguments allowed MAX. An error is thrown otherwise
-
-//As an aside, probably should not be using more than 9 arguements in
-//a function call anyways
+//14 normal arguments allowed. The 15th argument is an array of all arguments.
 function callFunction(functionRef, arguments)
 {
-	if(array_length(arguments) > 10)
-	{
-		throw("Indirect function call uses more than 9 arguments");
-	}
-	arr = array_create(10,undefined);
+
+	arr = array_create(15,undefined);
 	for(var i = 0; i < array_length(arguments); ++i)
 	{
 		arr[i] = arguments[i];
 	}
 
-	return functionRef(arr[0],arr[1],arr[2],arr[3],arr[4],arr[5],arr[6],arr[7],arr[8],arr[9]);
+	return functionRef(arr[0],arr[1],arr[2],arr[3],arr[4],
+	arr[5],arr[6],arr[7],arr[8],arr[9],arr[10],arr[11],arr[12],arr[13],
+	arr[14],arguments);
 }
 
 // Helper struct that acts like a pointer. An enviorment (container)
@@ -42,7 +38,7 @@ function Reference(container,key = undefined, checkExistance = true) constructor
 		}
 		setValue = function(newVal)
 		{
-			throw("Attempted to set the value of a reference that does not have a key.");	
+			InterpreterException("Attempted to set the value of a reference that does not have a key.");	
 		}
 	}
 	else
@@ -55,13 +51,13 @@ function Reference(container,key = undefined, checkExistance = true) constructor
 				case "struct":
 					if(!variable_struct_exists(container,key))
 					{
-						throw(errMsg)
+						InterpreterException(errMsg)
 					}
 				break
 				case "ref":
 					if(!variable_instance_exists(container,key))
 					{
-						throw(errMsg)
+						InterpreterException(errMsg)
 					}
 				break
 			}

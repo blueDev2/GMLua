@@ -164,11 +164,12 @@ function ASTAssignment(names,expressions): ASTStatement() constructor
 }
 
 
-function ASTFunctionBody(paramlist, isVarArgs, block): ASTExpression() constructor
+function ASTFunctionBody(paramlist, isVarArgs, block, firstLine): ASTExpression() constructor
 {
 	self.paramlist = paramlist;
 	self.isVarArgs = isVarArgs;
 	self.block = block;
+	self.firstLine = firstLine;
 	
 	expressionType = Expression.FUNCTIONBODY;
 }
@@ -220,10 +221,10 @@ function ASTFunctionCall(name,args,finalIndex = noone): ASTExpression()  constru
 	expressionType = Expression.FUNCTIONCALL;
 }
 
-function ASTTable(keys,values): ASTExpression()  constructor
+function ASTTable(keys,values,lastAutoIndex): ASTExpression()  constructor
 {
 	self.keys = keys;
 	self.values = values;
-	
+	self.lastAutoIndex = lastAutoIndex
 	expressionType = Expression.TABLE;	
 }

@@ -75,6 +75,88 @@ function luaFunction(ASTFunc,scope) : valueParent() constructor
 	self.val = ASTFunc;
 	self.persistentScope = scope;
 	self.UID = createUniqueRefID();
+	self.analogousItem = function()
+	{
+		global.interpreter.globalScope = persistentScope.parent;
+		var expArgs = array_create(15,new simpleValue(undefined));
+		for(var i = 0; i < argument_count; ++i)
+		{
+			expArgs[i] = GMLToLua(argument[i]);
+		}
+		//var prevScope = global.interpreter.currentScope;
+		var funcBodyExp = self;
+		var funcBodyAST = funcBodyExp.val;
+		global.interpreter.currentScope = funcBodyExp.persistentScope;
+			
+		global.interpreter.currentScope = new Scope(global.interpreter.currentScope);
+			
+		var isVarArgs = funcBodyAST.isVarArgs;
+		var paramNames = [];
+		var block = funcBodyAST.block
+		for(var i = 0; i < array_length(funcBodyAST.paramlist); ++i)
+		{
+			array_push(paramNames,funcBodyAST.paramlist[i])
+		}
+
+		for(var i = 0;i < array_length(paramNames); ++i)
+		{
+			var curExpression = new simpleValue(undefined);
+			if(i < array_length(expArgs))
+			{
+				curExpression = expArgs[i];
+			}
+			global.interpreter.currentScope.setLocalVariable(paramNames[i],curExpression);
+		}
+		if(isVarArgs)
+		{
+			var varArgs = []
+			for(var i = array_length(paramNames); i < array_length(expArgs); ++i)
+			{
+				array_push(varArgs,new Reference(expArgs[i]));
+			}
+			global.interpreter.currentScope.getVariable("...").setValue(new ExpressionList(varArgs,true));
+		}
+		try
+		{
+			global.interpreter.helpVisitBlock(block);
+			return new Reference(new simpleValue(undefined));
+		}
+		catch(e)
+		{
+			if(!variable_struct_exists(e,"type"))
+			{
+				throw(e);
+			}
+			if(e.type == ExceptionType.BREAK || e.type == ExceptionType.JUMP)
+			{
+				e.type = ExceptionType.UNCATCHABLE;
+			}
+			if(e.type == ExceptionType.RETURN)
+			{
+				var retValue = (e.value);
+				if(typeof(retValue) == "array")
+				{
+					var retArray = [];
+					for(var i = 0; i < array_length(retValue); ++i)
+					{
+						array_push(retArray,LuaToGML(retValue[i].getValue()));
+					}
+					return retArray;
+				}
+				return LuaToGML(retValue.getValue())
+			}
+			if(e.lineNumber == -1)
+			{
+				e.lineNumber = funcBody.val.firstLine;
+			}
+			global.HandleGMLuaExceptions(e,persistentScope.parent.associatedFilePath)
+		}
+		finally
+		{
+			currentScope = noone;
+			globalScope = noone;
+		}
+	}
 	type = LuaTypes.FUNCTION;
 	getValue = function()
 	{
@@ -86,7 +168,7 @@ function luaFunction(ASTFunc,scope) : valueParent() constructor
 	}
 	toString = function()
 	{
-		return "{" + "type: " + string(type) +", val: "+ string(val) + "}"
+		return "{" + "type: " + string(type) +", UID: "+ string(UID) + "}"
 	}
 }
 
@@ -106,7 +188,11 @@ function GMFunction(funcRef,isGMLtoGML = true) :  valueParent() constructor
 	{
 		val = newVal;
 	}
-
+	toString = function()
+	{
+		return "{" + "type: " + string(type) +", UID: "+ string(UID) +
+		", isGMLtoGML: "+string(isGMLtoGML)+"}"
+	}
 }
 
 function Thread(func) :  valueParent() constructor
@@ -166,10 +252,8 @@ function Table(newVal = {}, newAnalogousObject = {}) constructor
 	self.UID = createUniqueRefID();
 	metatable = noone;
 	
-	
 	getValue = function(key)
 	{
-
 		key = LuaToHash(key);
 		if(key == "undefined")
 		{
@@ -208,6 +292,11 @@ function Table(newVal = {}, newAnalogousObject = {}) constructor
 				{
 					needsUpdate = true;
 				}
+				else if(expression.type == LuaTypes.FUNCTION &&
+				expression.analogousItem == analogousItem)
+				{
+					
+				}
 				else if(expression.type != LuaTypes.GMFUNCTION)
 				{
 					needsUpdate = true;
@@ -221,16 +310,15 @@ function Table(newVal = {}, newAnalogousObject = {}) constructor
 				}
 			}
 			else
-			{
-				
+			{	
 				if(expression == undefined)
 				{
-					val[$key] = luaReference(analogousObject,key);
+					val[$key] = new luaReference(analogousObject,key);
 					expression = val[$key];	
 				}
 				else if(expression.type != LuaTypes.REFERENCE)
 				{
-					val[$key] = luaReference(analogousObject,key);
+					val[$key] = new luaReference(analogousObject,key);
 					expression = val[$key];	
 				}
 			}
@@ -241,6 +329,11 @@ function Table(newVal = {}, newAnalogousObject = {}) constructor
 				val[$key] = GMLToLua(analogousItem)
 				expression = val[$key];	
 			}
+		}
+		else if(expression == undefined)
+		{
+			val[$key] = new luaReference(analogousObject,key);
+			expression = val[$key];	
 		}
 		
 		if(is_undefined(expression))
@@ -256,7 +349,7 @@ function Table(newVal = {}, newAnalogousObject = {}) constructor
 		{
 			return expression.getValue();
 		}
-		throw("Error found, expression type within table is unexpected")
+		InterpreterException("Error found, expression type within table is unexpected")
 	}
 	getValueFromVal = function(GMLkey)
 	{
@@ -278,11 +371,17 @@ function Table(newVal = {}, newAnalogousObject = {}) constructor
 			switch(newVal.type)
 			{
 				case LuaTypes.GMFUNCTION:
-				refToValue.setValue(newVal.val);
+					refToValue.setValue(newVal.val);
+				break;
 				case LuaTypes.TABLE:
-				refToValue.setValue(newVal.analogousObject);
+					refToValue.setValue(newVal.analogousObject);
+				break;
+				case LuaTypes.FUNCTION:
+					refToValue.setValue(newVal.analogousItem);
+				break
 				default:
-				refToValue.setValue(undefined);
+					refToValue.setValue(undefined);
+				break;
 			}
 		}
 		//newVal is a non-reference expression, which will be saved using reference expression that
@@ -296,8 +395,51 @@ function Table(newVal = {}, newAnalogousObject = {}) constructor
 
 	toString = function()
 	{
-		var str =  "{analogousObject: " +string(analogousObject)+", UID: "
-		+string(UID);
+		var str = "{";
+		if(true)
+		{
+		    str +=  "analogousObject: {"; 
+			var names = noone
+			switch(typeof(analogousObject))
+			{
+				case "struct":
+					names = variable_struct_get_names(analogousObject)
+					for(var i = 0; i < array_length(names);++i)
+					{
+						var val = variable_struct_get(analogousObject,names[i])
+						if(is_instanceof(val,Scope))
+						{
+							continue;
+						}
+						str += " "+ names[i] + ": ";
+						str += string(val)
+						if(i != array_length(names) - 1)
+						{
+							str += ", "
+						}
+					}
+				break;
+				case "ref":
+					names = variable_instance_get_names(analogousObject)
+					for(var i = 0; i < array_length(names);++i)
+					{
+						var val = variable_instance_get(analogousObject,names[i])
+						if(is_instanceof(val,Scope))
+						{
+							continue;
+						}
+						str += " "+ names[i] + ": ";
+						str += string(val)
+						if(i != array_length(names) - 1)
+						{
+							str += ", "
+						}
+					}
+				break;
+			}
+			str += "} ,"
+		}
+		str += "UID: " +string(UID);
 		if(metatable != noone)
 		{
 			str += ", metatable.UID: " +string(metatable.UID);
@@ -313,7 +455,7 @@ function Table(newVal = {}, newAnalogousObject = {}) constructor
 function luaReference(container, key) : valueParent() constructor
 {
 	type = LuaTypes.REFERENCE;
-	self.ReferenceObject = new Reference(container,key);
+	self.ReferenceObject = new Reference(container,key,false);
 	//Returns a GML value
 	getValue = function()
 	{
@@ -335,10 +477,13 @@ function LuaToGML(luaItem)
 	{
 		return luaItem.analogousObject;	
 	}
-	if(luaItem.type == LuaTypes.FUNCTION 
-	|| luaItem.type == LuaTypes.THREAD|| luaItem.type == LuaTypes.GMFUNCTION)
+	else if(luaItem.type == LuaTypes.GMFUNCTION)
 	{
-		return luaItem;
+		return luaItem.val;
+	}
+	else if(luaItem.type == LuaTypes.FUNCTION)
+	{
+		return luaItem.analogousItem;
 	}
 	return luaItem.val;
 }
@@ -360,7 +505,26 @@ function LuaToHash(luaItem)
 		}
 		case (LuaTypes.STRING):
 		{
-			return "String_"+luaItem.val;	
+			static hash_prefixes = 
+			["Table_","Function_", "GMFunction_","Number_"];
+			static direct_hashes =
+			["Nil","Boolean_True", "Boolean_False"];
+			var str = luaItem.val
+			for(var i = 0 ; i < array_length(hash_prefixes); ++i)
+			{
+				if(string_starts_with(str,hash_prefixes[i]))
+				{
+					InterpreterException("A string used as an index in a table cannot be prefixed with \""+hash_prefixes[i]+"\"")
+				}
+			}
+			for(var i = 0 ; i < array_length(direct_hashes); ++i)
+			{
+				if(string_starts_with(str,direct_hashes[i]))
+				{
+					InterpreterException("A string used as an index in a table cannot be \""+direct_hashes[i]+"\"")
+				}
+			}
+			return luaItem.val;	
 		}
 		case (LuaTypes.NIL):
 		{
@@ -451,7 +615,7 @@ function Variable(value = new simpleValue(undefined),attribute = noone): valuePa
 	{
 		if(attribute == "const")
 		{
-			throw("Attempted to change a constant variable");	
+			InterpreterException("Attempted to change a constant variable");	
 		}
 		self.value = value;
 	}

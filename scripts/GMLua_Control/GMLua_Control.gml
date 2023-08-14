@@ -44,23 +44,25 @@ with(global.GMLua)
 		return abstractTree;
 	}
 	
-	function runAST(abstractTree, scope = new Scope(), logFolderPath )
+	runAST = function(abstractTree, scope = new Scope(), logFolderPath )
 	{
 		if(is_undefined(logFolderPath))
 		{
-			logFolderPath = (abstractTree.sourceFilePath+"InterpreterLog_"+abstractTree.sourceFileName)
+			logFolderPath = (abstractTree.sourceFilePath+"InterpreterLog_");
+			var beforeDotStr = string_split((abstractTree.sourceFileName),".")[0];
+			logFolderPath += beforeDotStr + ".txt";
 		}
 		var newScope = global.interpreter.visitChunk(abstractTree,scope);
 		if(logmode)
 		{
-			var f = file_text_open_write(logFolderPath + "InterpreterLog.txt");
+			var f = file_text_open_write(logFolderPath);
 			file_text_write_string(f,string(newScope));
 			file_text_close(f);
 		}
 		return newScope;
 	}
 
-	function createLuaFromFile(filePath,logmode)
+	createLuaFromFile = function(filePath,logmode)
 	{
 		var file = file_text_open_read(filePath);
 		var code = "";
@@ -74,9 +76,36 @@ with(global.GMLua)
 		return lexAndParse(code,logmode,folderPath,fileName);
 	}
 
-	function createLuaFromString(str,logmode = noone)
+	createLuaFromString = function(str,logmode)
 	{
 		return lexAndParse(str,logmode);
 	}
 	
+}
+
+function createLuaFromFile(filePath, logmode=false)
+{
+	return global.GMLua.createLuaFromFile(filePath, logmode)
+}
+function createLuaFromString(str,logmode=false)
+{
+	return global.GMLua.createLuaFromString(str,logmode)
+}
+function runAST(abstractTree, scope = new Scope(), logFolderPath)
+{
+	return global.GMLua.runAST(abstractTree, scope, logFolderPath)
+}
+
+function setGMLVariable(scope,name, newExp)
+{
+	scope.setLocalVariable(name,GMLToLua(newExp))
+}
+function setGMLFunction(scope,name, func, isGMLtoGML = true)
+{
+	scope.setLocalVariable(name, new GMFunction(func,isGMLtoGML))
+}
+
+function getLuaVariable(scope,name)
+{
+	return LuaToGML(scope.getVariable(name).getValue());
 }

@@ -1,22 +1,25 @@
 
-var testFileLocations = [];
-array_push(testFileLocations,"test/test_metamethods2/test.lua");
+/*var testFileLocations = [];
+array_push(testFileLocations,"test/test_metamethods/test.lua");
 array_push(testFileLocations,"test/test_operators/test.lua");
 array_push(testFileLocations,"test/test_goto/test.lua");
-//var thing = method(undefined, array_push)
-//var a = variable_global_get("array_push")
+array_push(testFileLocations,"test/test_varargs/test.lua");
 
 for(var i = 0; i < array_length(testFileLocations); ++i)
 {
 	var curFile = (testFileLocations[i]);
-	var chunk = global.GMLua.createLuaFromFile(curFile);
+	var chunk = createLuaFromFile(curFile);
 	show_debug_message("Current test file: "+(testFileLocations[i]));
-	global.GMLua.runAST(chunk,,);
+	var scope = new Scope();
+	//var data = {sand:23}
+	//setGMLVariable(scope,"test1",data)
+	runAST(chunk,scope,);
+	//show_debug_message(data.sand)
+	//show_debug_message(getLuaVariable(scope,"add")(1,2,3));
 }
 
 
-
 //show_debug_message(scope)
-game_end();
+game_end();*/
 
 

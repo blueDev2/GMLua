@@ -5,6 +5,9 @@ function Scope(parent = noone,variables = {}) constructor
 	//If there is no parent, this scope is the global scope
 	//(Function scopes will have a global scope as the parent)
 	self.parent = parent;
+	//Only the global scope knows the associatedFilePath
+	
+	self.associatedFilePath = noone;
 	self.variables = variables;
 	
 	//ONLY FOR DECLARATION USE
@@ -45,16 +48,7 @@ function Scope(parent = noone,variables = {}) constructor
 		}
 		
 	}
-	
-	function setGMLVariable(name, newExp)
-	{
-		setLocalVariable(name, GMLToLua(newExp));
-	}
-	
-	function setGMLFunction(name, func, isGMLtoGML = true)
-	{
-		setLocalVariable(name, new GMFunction(func,isGMLtoGML))
-	}
+
 	
 	function copyLocalScope()
 	{

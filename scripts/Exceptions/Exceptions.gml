@@ -15,23 +15,71 @@ enum ExceptionType
 
 //Return or Break exceptions should be converted to Uncatchable
 //Exceptions when applicaple.
+
 function InterpreterException(msg)
 {
-	throw({type: ExceptionType.UNCATCHABLE,value: "RuntimeException: "+ msg});
+	throw({type: ExceptionType.UNCATCHABLE,
+		originalType: ExceptionType.UNCATCHABLE,
+		lineNumber: -1,
+		value: "RuntimeException: "+ msg});
 }
 
 function ReturnException(expression)
 {
-	var excpt = {type: ExceptionType.RETURN, value: expression}
+	var excpt = {type: ExceptionType.RETURN,
+				originalType: ExceptionType.RETURN,
+				value: expression,
+				lineNumber: -1}
 	throw(excpt);
 }
 
 function BreakException()
 {
-	throw({type: ExceptionType.BREAK,value: "Break statement outside of a loop"});
+	throw({type: ExceptionType.BREAK,
+		originalType: ExceptionType.BREAK,
+		lineNumber: -1,
+		});
 }
 
 function JumpException(ASTgoto)
 {
-	throw({type: ExceptionType.JUMP,value: ASTgoto.labelName ,msg: "Goto: "+ ASTgoto.labelName+" cannot find a visible label"});
+	throw({type: ExceptionType.JUMP,
+		originalType: ExceptionType.JUMP,
+		value: ASTgoto.labelName ,
+		lineNumber: -1,
+		});
+}
+
+function HandleGMLuaExceptions(error, fullFilePath)
+{
+	if(!variable_struct_exists(error,"type"))
+	{
+		throw(error);
+	}
+	var lineNumber = string(error.lineNumber);
+	var thrownString = "";
+
+	switch(error.originalType)
+	{
+		case ExceptionType.RETURN:
+			thrownString = "Return statement at line "+lineNumber +
+			" is not in a function body."
+		break;
+		case ExceptionType.BREAK:
+			thrownString = "Break statement at line "+lineNumber +
+			" is not in a loop body."
+		break;
+		case ExceptionType.UNCATCHABLE:
+			thrownString = error.value + "\nThis is at line "+lineNumber +".";
+		break;
+		case ExceptionType.JUMP:
+			thrownString = "Goto " + error.labelName + " at line " +lineNumber+
+			" has no visable labels"; 
+		break;
+	}
+	if(!is_undefined(fullFilePath))
+	{
+		thrownString += "\nThis exception is from the source code at " +fullFilePath;
+	}
+	throw(thrownString)
 }

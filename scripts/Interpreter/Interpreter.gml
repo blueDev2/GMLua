@@ -12,15 +12,25 @@ with(global.interpreter)
 
 	function visitChunk(chunk, scope = new Scope(noone), addBasicLibrary = true)
 	{
+		scope.associatedFilePath = chunk.sourceFilePath+chunk.sourceFileName
 		globalScope = scope;
 		if(addBasicLibrary)
 		{
 			global.LuaLibrary.addBasicLibraryFunctions(globalScope)
 		}
 		currentScope = new Scope(scope);
-		helpVisitBlock(chunk.block);
-		currentScope = currentScope.parent;
-		return currentScope;
+		try
+		{
+			helpVisitBlock(chunk.block);
+		}
+		catch(e)
+		{
+			HandleGMLuaExceptions(e,scope.associatedFilePath);
+		}
+		scope  = currentScope.parent;
+		globalScope = noone;
+		currentScope = noone;
+		return scope;
 	}
 
 	function helpVisitBlock(block)
@@ -37,6 +47,10 @@ with(global.interpreter)
 			}
 			catch(e)
 			{
+				if(instanceof(e) != "Scope")
+				{
+					throw(e)
+				}
 				if(e.type == ExceptionType.JUMP)
 				{
 					if(variable_struct_exists(block.gotoIndices,e.value))
@@ -103,12 +117,14 @@ with(global.interpreter)
 	}
 	visitStatement = function(visitor)
 	{
-		if(variable_struct_get(visitor,"expressionType") == Expression.FUNCTIONCALL)
+		try
+		{
+			if(variable_struct_get(visitor,"expressionType") == Expression.FUNCTIONCALL)
 		{
 			visitFunctionCall(visitor);	
 			return;
 		}
-		switch(visitor.statementType)
+			switch(visitor.statementType)
 		{
 			case Statement.ASSIGNMENT:
 				visitAssignment(visitor);
@@ -149,6 +165,19 @@ with(global.interpreter)
 			default:
 				InterpreterException("Attempted to visit a statement, but visitor is not a statement");
 			break;
+		}
+		}
+		catch(e)
+		{
+			if(instanceof(e) != "Scope")
+			{
+				throw(e);
+			}
+			if(e.lineNumber == -1)
+			{
+				e.lineNumber = visitor.firstLine;
+			}
+			throw(e)
 		}
 	}
 	//Statements
@@ -360,10 +389,7 @@ with(global.interpreter)
 			//vaeiable
 			currentScope = currentScope.parent;	
 		}
-
-		
 	}
-	//Disabled until I can figure out how to deal with scope
 	visitGoto = function(visitor)
 	{
 		JumpException(visitor)
@@ -400,10 +426,10 @@ with(global.interpreter)
 			}
 		}
 	}
-	//Should be impossible
+	//Should be impossible, labels are discarded by parser.
 	visitLabel = function(visitor)
 	{
-		InterpreterException("A label has been visted, there is an issue with the interpreter");
+		InterpreterException("A label has been visted, there is an issue with the interpreter or parser");
 	}
 	visitRepeat = function(visitor)
 	{
@@ -454,6 +480,7 @@ with(global.interpreter)
 		{
 			array_push(retExps,visitExpression(expressions[i]));
 		}
+		retExps = helpPruneExpList(retExps,-1);
 		ReturnException(retExps);
 	}
 	visitWhile = function(visitor)
@@ -661,7 +688,7 @@ with(global.interpreter)
 				{
 					array_push(varArgs,new Reference(expArgs[i]));
 				}
-				currentScope.getVariable("...").setValue(new ExpressionList(varArgs));
+				currentScope.getVariable("...").setValue(new ExpressionList(varArgs,true));
 			}
 			try
 			{
@@ -670,7 +697,7 @@ with(global.interpreter)
 			}
 			catch(e)
 			{
-				if(!variable_struct_exists(e,"type"))
+				if(instanceof(e) != "Scope")
 				{
 					throw(e);
 				}
@@ -681,6 +708,10 @@ with(global.interpreter)
 				if(e.type == ExceptionType.RETURN)
 				{
 					return (e.value);
+				}
+				if(e.lineNumber == -1)
+				{
+					e.lineNumber = funcBody.val.firstLine;
 				}
 				throw(e);
 			}
@@ -702,8 +733,19 @@ with(global.interpreter)
 			{
 				array_push(GMLParameters,LuaToGML(expArgs[i]));
 			}
-
-			return new Reference(GMLToLua(callFunction(GMLfunc,GMLParameters)));
+			var retVal = callFunction(GMLfunc,GMLParameters);
+			if(typeof(retVal) == "array")
+			{
+				for(var i = 0; i < array_length(retVal);++i)
+				{
+					retVal[i] = new Reference(GMLToLua(retVal[i]));
+				}
+				return retVal;
+			}
+			else
+			{
+				return new Reference(GMLToLua(retVal));
+			}
 		}
 		else if(funcBodyExp.type == LuaTypes.THREAD)
 		{
@@ -711,7 +753,7 @@ with(global.interpreter)
 		}
 		else if(funcBodyExp.type == LuaTypes.TABLE)
 		{
-			callMetamethod("()",funcBodyExp,expArgs);
+			return callMetamethod("()",funcBodyExp,expArgs);
 		}
 		else
 		{
@@ -742,19 +784,42 @@ with(global.interpreter)
 		//var analagousData = {};
 		
 		var table = new Table();
-		
-		for(var i = 0; i < array_length(keyASTs); ++i)
+		if(array_length(keyASTs) == 0)
 		{
-			keyExpRefs[i] = visitExpression(keyASTs[i]);
-			valueExpRefs[i] = visitExpression(valueASTs[i]);
+			return new Reference(table);
 		}
+		
+		for(var i = 0; i < array_length(keyASTs)-1; ++i)
+		{
+			keyExpRefs[i] = helpPruneExpList(visitExpression(keyASTs[i]));
+			valueExpRefs[i] = helpPruneExpList(visitExpression(valueASTs[i]));
+		}
+		var lastIndex = array_length(keyASTs)-1;
+		if(lastIndex == visitor.lastAutoIndex)
+		{
+			var lastKey = keyASTs[lastIndex].value;
+			var lastValueExps = visitExpression(valueASTs[lastIndex])	
+			if(typeof(lastValueExps) != "array")
+			{
+				lastValueExps = [lastValueExps];
+			}
+			for(var i = 0; i < array_length(lastValueExps); ++i)
+			{
+				var keyExpression = new simpleValue(lastKey+i);
+				var valueExpression = lastValueExps[i].getValue();
+				table.setValue(keyExpression,valueExpression);
+			}
+		}
+		else
+		{
+			var lastKeyRef = helpPruneExpList(visitExpression(keyASTs[lastIndex]))
+			var lastValueRef = helpPruneExpList(visitExpression(valueASTs[lastIndex]))
+			table.setValue(lastKeyRef.getValue(), lastValueRef.getValue())
+		}
+		
 		for(var i = 0; i < array_length(keyExpRefs); ++i)
 		{
 			var key = keyExpRefs[i].getValue();
-			if(key == undefined)
-			{
-				InterpreterException("Undefined indexing");	
-			}
 			var valueExp = valueExpRefs[i].getValue();
 			table.setValue(key,valueExp);
 		}
@@ -1498,7 +1563,7 @@ with(global.interpreter)
 					var ASTLeftSide = new ASTAccess(ASTtable, ASTKey)
 					var ASTRightSide = new ASTAccess("0_newVal");
 					
-					visitAssignment(new ASTAssignment([ASTLeftSide],[ASTRightSide]))
+					visitStatement(new ASTAssignment([ASTLeftSide],[ASTRightSide]))
 				}
 				else if(metaValue.type == LuaTypes.FUNCTION ||
 				metaValue.type == LuaTypes.GMFUNCTION)
@@ -1508,7 +1573,7 @@ with(global.interpreter)
 					var ASTarg3 = new ASTAccess("0_newVal");
 					
 					var ASTfunc = new ASTAccess("0_table");
-					visitFunctionCall(new ASTFunctionCall(ASTfunc,
+					visitStatement(new ASTFunctionCall(ASTfunc,
 					[ASTarg1,ASTarg2,ASTarg3]));
 				}
 				else
@@ -1540,14 +1605,14 @@ with(global.interpreter)
 					var ASTfunc = new ASTAccess("0_func");
 					var ASTArgs = new ASTAccess("0_argExps");
 					//TODO: Args need to be spread out as individual vals
-					retVal = visitFunctionCall(new ASTFunctionCall(ASTfunc,[ASTArgs]));
+					retVal = visitExpression(new ASTFunctionCall(ASTfunc,[ASTArgs]));
 				}
 				else
 				{
 					MetamethodFailureException(op,exp1,exp2)
 				}
 				currentScope = currentScope.parent;
-				return retVal.getValue()
+				return retVal
 			}
 			break;
 
@@ -1619,7 +1684,7 @@ with(global.interpreter)
 				}
 				var ASTfuncExp = new ASTFunctionCall(new ASTAccess("0_func"),
 				ASTArgs);
-				var result = helpPruneExpList(visitFunctionCall(ASTfuncExp));
+				var result = helpPruneExpList(visitExpression(ASTfuncExp));
 				currentScope = currentScope.parent;
 				if(op == "==" || op == "<" || op == "<=")
 				{

@@ -13,7 +13,7 @@ for(var i = 0; i < array_length(testFileLocations); ++i)
 	var scope = new Scope();
 	//var data = {sand:23}
 	//setGMLVariable(scope,"test1",data)
-	runAST(chunk,scope,);
+	runLua(chunk,scope,);
 	//show_debug_message(data.sand)
 	//show_debug_message(getLuaVariable(scope,"add")(1,2,3));
 }

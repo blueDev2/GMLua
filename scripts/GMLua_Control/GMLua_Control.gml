@@ -91,9 +91,9 @@ function createLuaFromString(str,logmode=false)
 {
 	return global.GMLua.createLuaFromString(str,logmode)
 }
-function runAST(abstractTree, scope = new Scope(), logFolderPath)
+function runLua(luaObj, scope = new Scope(), logFolderPath)
 {
-	return global.GMLua.runAST(abstractTree, scope, logFolderPath)
+	return global.GMLua.runAST(luaObj, scope, logFolderPath)
 }
 
 function setGMLVariable(scope,name, newExp)

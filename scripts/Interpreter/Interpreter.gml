@@ -47,7 +47,7 @@ with(global.interpreter)
 			}
 			catch(e)
 			{
-				if(instanceof(e) != "Scope")
+				if(is_instanceof(e,Scope))
 				{
 					throw(e)
 				}
@@ -169,7 +169,7 @@ with(global.interpreter)
 		}
 		catch(e)
 		{
-			if(instanceof(e) != "Scope")
+			if(is_instanceof(e,Scope))
 			{
 				throw(e);
 			}
@@ -697,7 +697,7 @@ with(global.interpreter)
 			}
 			catch(e)
 			{
-				if(instanceof(e) != "Scope")
+				if(is_instanceof(e,Scope))
 				{
 					throw(e);
 				}

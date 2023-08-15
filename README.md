@@ -66,6 +66,14 @@ LuatoLua functions provide the Lua values directly and expect a return Lua value
 
 ### function getLuaVariable(scope,name)
 
+# GMLua specific functions
+
+### function getgmlfunction(functionName)
+Takes a string which is the name of a GML built in function and returns a GMFunction of said GML built in function
+
+### function callwithcontext(context,func,[args...])
+Certain built in functions, such as the ones used in collisions, must have context of an instance to work properly. Take context, a function, using the remaining expressions as arguments, return the func's return.
+
 # Data Types and Conversions
 
 NOTICE (Functions): Lua has 2 data types for functions: Function and GMFunction. The former is for functions defined in Lua, the latter is for functiond defined in GML. Both may be used interchangeably in the Lua code.  
@@ -121,4 +129,4 @@ Function -> Method
 
 A test.zip file is provided in this project. If you would like to see a demo of this in action, place the test.zip file in the appropriate location depending on device and unzip it. Refer to [this](https://manual.yoyogames.com/Additional_Information/The_File_System.htm) part of the manual.
 
-Run the project and you should see 2 red circles with grey centers that follow the mouse at differing speeds. Please then check on the "Lua_test_object" to show an example on how to make the GML and Lua interact seamlessly.
+Run the project and you should see 2 red circles with grey centers that follow the mouse at differing speeds. Please then check on the "Lua_test_object" to see an example on how to make the GML and Lua interact seamlessly.

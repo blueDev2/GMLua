@@ -97,9 +97,14 @@ function runLua(luaObj, scope = new Scope(), logFolderPath)
 	return global.GMLua.runAST(luaObj, scope, logFolderPath)
 }
 
-function setGMLVariable(scope,name, newExp)
+function setGMLVariable(scope,name, newExp, isConst = false)
 {
-	scope.setLocalVariable(name,GMLToLua(newExp))
+	var attribute = noone;
+	if(isConst)
+	{
+		attribute = "const"
+	}
+	scope.setLocalVariable(name,GMLToLua(newExp),attribute);
 }
 function setGMLFunction(scope,name, func, isGMLtoGML = true)
 {

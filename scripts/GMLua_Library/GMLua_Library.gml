@@ -87,11 +87,64 @@ with(global.LuaLibrary)
 			}
 			return retList;
 		}
+		GMLtoGMLfunctions.callwithcontext = function(context,func)
+		{
+			var args = array_create(15,undefined)
+			for(var i = 2; i < array_length(argument[15]); ++i)
+			{
+				args[i-2] = argument[15][i]
+			}
+
+
+			with(context)
+			{
+				var retVal = func(args[0],args[1],args[2],args[3],args[4],
+	args[5],args[6],args[7],args[8],args[9],args[10],args[11],args[12],args[13],
+	args[14],args)
+				//show_debug_message(typeof(retVal))
+				return retVal;
+			}
+		}
 		
 		LuaToLuaFunctions.setmetatable = function(table,metatable)
 		{
 			table.metatable = metatable;
 			return table;
+		}
+		LuaToLuaFunctions.type = function(luaItem)
+		{
+			var typeName = "";
+			switch(luaItem.type)
+			{
+				case LuaTypes.NIL: 
+					typeName = "Nil"
+				break
+				case LuaTypes.BOOLEAN:	
+					typeName = "Boolean"
+				break
+				case LuaTypes.INTEGER:
+					typeName = "Integer"
+				break;	
+				case LuaTypes.FLOAT:
+					typeName = "Float"
+				break;
+				case LuaTypes.STRING:
+					typeName = "String"
+				break
+				case LuaTypes.FUNCTION:
+					typeName = "Function"
+				break
+				case LuaTypes.THREAD:
+					typeName = "Thread"
+				break
+				case LuaTypes.TABLE:
+					typeName = "Table"
+				break
+				case LuaTypes.GMFUNCTION:
+					typeName = "GMFunction"
+				break
+			}
+			return new simpleValue(typeName);
 		}
 	}
 	function addBasicLibraryFunctions(scope)
@@ -113,5 +166,10 @@ with(global.LuaLibrary)
 			var curName = funcNames[i];
 			setGMLFunction(scope,curName,LuaToLuaFunctions[$curName],false);		
 		}
+		
+		setGMLVariable(scope,"self",-1,true);
+		setGMLVariable(scope,"other",-2,true);
+		setGMLVariable(scope,"all",-3,true);
+		setGMLVariable(scope,"noone",-4,true);
 	}
 }

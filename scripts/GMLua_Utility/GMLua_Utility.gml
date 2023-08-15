@@ -5,7 +5,7 @@
 //and a reference to the function
 
 //This is really ugly and there may be a better way, but I have not found it
-//14 normal arguments allowed. The 15th argument is an array of all arguments.
+//15 normal arguments allowed. The 15th argument is an array of all arguments.
 function callFunction(functionRef, arguments)
 {
 

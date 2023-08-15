@@ -35,6 +35,7 @@
   },
   "resources": [
     {"id":{"name":"Lua_test_object","path":"objects/Lua_test_object/Lua_test_object.yy",},},
+    {"id":{"name":"Script13","path":"scripts/Script13/Script13.yy",},},
     {"id":{"name":"AST","path":"scripts/AST/AST.yy",},},
     {"id":{"name":"GMLua_Library","path":"scripts/GMLua_Library/GMLua_Library.yy",},},
     {"id":{"name":"Enviorment","path":"scripts/Enviorment/Enviorment.yy",},},
@@ -44,6 +45,7 @@
     {"id":{"name":"Token","path":"scripts/Token/Token.yy",},},
     {"id":{"name":"Parser","path":"scripts/Parser/Parser.yy",},},
     {"id":{"name":"Lexer","path":"scripts/Lexer/Lexer.yy",},},
+    {"id":{"name":"Sprite1","path":"sprites/Sprite1/Sprite1.yy",},},
     {"id":{"name":"Analyzer","path":"scripts/Analyzer/Analyzer.yy",},},
     {"id":{"name":"GMLua_Utility","path":"scripts/GMLua_Utility/GMLua_Utility.yy",},},
     {"id":{"name":"Interpreter","path":"scripts/Interpreter/Interpreter.yy",},},

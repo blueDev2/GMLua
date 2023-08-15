@@ -16,3 +16,4 @@ onDraw = getLuaVariable(scope,"onDraw")
 
 //Run the lua function "onCreate"
 onCreate();
+

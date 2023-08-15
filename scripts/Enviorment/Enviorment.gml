@@ -147,7 +147,7 @@ function luaFunction(ASTFunc,scope) : valueParent() constructor
 			}
 			if(e.lineNumber == -1)
 			{
-				e.lineNumber = funcBody.val.firstLine;
+				e.lineNumber = funcBodyAST.firstLine;
 			}
 			global.HandleGMLuaExceptions(e,persistentScope.parent.associatedFilePath)
 		}
@@ -267,50 +267,35 @@ function Table(newVal = {}, newAnalogousObject = {}) constructor
 		if(analogousItem != undefined)
 		{
 			var gmlType = typeof(analogousItem);
-			var needsUpdate = false;
+			var needsUpdate = true;
+			//Table
 			if(gmlType == "struct" || gmlType == "ref")
 			{
-				if(is_undefined(expression))
+				if((!is_undefined(expression)) && (expression.type == LuaTypes.TABLE)
+				&& (expression.analogousObject == analogousItem))
 				{
-					needsUpdate = true;
-				}
-				else if(expression.type != LuaTypes.TABLE)
-				{
-					needsUpdate = true;
-				}
-				else
-				{
-					if(expression.analogousObject != analogousItem)
-					{
-						needsUpdate = true;
-					}
+					needsUpdate = false;
 				}
 			}
+			//Function or GMFunction
 			else if(is_method(analogousItem))
 			{
-				if(is_undefined(expression))
+				if((!is_undefined(expression))&&(expression.type == LuaTypes.GMFUNCTION)
+				&& expression.val == analogousItem)
 				{
-					needsUpdate = true;
+					needsUpdate = false;
 				}
-				else if(expression.type == LuaTypes.FUNCTION &&
-				expression.analogousItem == analogousItem)
+				else if((!is_undefined(expression)) && (expression.type == LuaTypes.FUNCTION) &&
+				(expression.analogousItem == analogousItem))
 				{
-					
+					needsUpdate = false;
 				}
-				else if(expression.type != LuaTypes.GMFUNCTION)
-				{
-					needsUpdate = true;
-				}
-				else
-				{
-					if(expression.val != analogousItem)
-					{
-						needsUpdate = true;
-					}
-				}
+
 			}
+			//Non-reference expression
 			else
 			{	
+				var needsUpdate = false;
 				if(expression == undefined)
 				{
 					val[$key] = new luaReference(analogousObject,key);
@@ -330,12 +315,12 @@ function Table(newVal = {}, newAnalogousObject = {}) constructor
 				expression = val[$key];	
 			}
 		}
-		else if(expression == undefined)
+		/*else if(expression == undefined)
 		{
 			val[$key] = new luaReference(analogousObject,key);
 			expression = val[$key];	
 		}
-		
+		*/
 		if(is_undefined(expression))
 		{
 			return new simpleValue(undefined);	

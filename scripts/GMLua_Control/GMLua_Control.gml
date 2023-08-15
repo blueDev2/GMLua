@@ -91,6 +91,7 @@ function createLuaFromString(str,logmode=false)
 {
 	return global.GMLua.createLuaFromString(str,logmode)
 }
+
 function runLua(luaObj, scope = new Scope(), logFolderPath)
 {
 	return global.GMLua.runAST(luaObj, scope, logFolderPath)
@@ -109,3 +110,4 @@ function getLuaVariable(scope,name)
 {
 	return LuaToGML(scope.getVariable(name).getValue());
 }
+

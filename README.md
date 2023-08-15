@@ -115,6 +115,7 @@ Function -> Method
 - There is no intent to add Userdata and any C related APIs
 - The library has 3 basic functions: print, select, setmetatable
 - The library function getgmlfunction allows Lua code to request a built-in function by name.
+- Goto statements are NOT prohibited from jumping into the scope of a local variable
 
 # Demo
 

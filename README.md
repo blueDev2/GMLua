@@ -94,7 +94,7 @@ Struct, Instance -> Table
 
 Undefined -> Nil
 
-Method -> GMFunction (Since non-method functions are indistinguishable from integers, if you wish to provide a non-method function to a Lua scope, first turn it into a method via method(undefined,func));
+Method -> GMFunction (Since non-method functions are indistinguishable from integers, if you wish to provide a non-method function to a Lua scope, first turn it into a method via method(undefined,func))
 
 
 ## Lua to GML
@@ -119,7 +119,6 @@ Function -> Method
 
 - Table string keys cannot start with: ["Table_","Function_", "GMFunction_","Number_"]
 - Table string keys cannot be: ["Nil","Boolean_True", "Boolean_False"]
-- Threads are not (currently) working
 - There is no intent to add Userdata and any C related APIs
 - The library has 3 basic functions: print, select, setmetatable
 - The library function getgmlfunction allows Lua code to request a built-in function by name.

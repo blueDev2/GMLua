@@ -56,7 +56,23 @@ with(global.LuaLibrary)
 				{
 					continue;
 				}
-				printStr += (string(args[i]) + "    ")
+				var str = noone;
+				if(typeof(args[i]) == "bool")
+				{
+					if(args[i])
+					{
+						str = "true"
+					}
+					else
+					{
+						str = "false";
+					}
+				}
+				else
+				{
+					str = string(args[i])
+				}
+				printStr += (str + "    ")
 			};
 			show_debug_message(printStr)
 		}
@@ -144,32 +160,99 @@ with(global.LuaLibrary)
 					typeName = "GMFunction"
 				break
 			}
-			return new simpleValue(typeName);
+			return new Reference(new simpleValue(typeName));
 		}
 	}
-	function addBasicLibraryFunctions(scope)
+	coroutineLibrary ={}
+	with(coroutineLibrary)
 	{
-		var GMLtoGMLfunctions = basicFunctionLibrary.GMLtoGMLfunctions;
-		var LuaToLuaFunctions = basicFunctionLibrary.LuaToLuaFunctions;
+		GMLtoGMLfunctions = {};
+		LuaToLuaFunctions = {};
+		
+		LuaToLuaFunctions.yield = function()
+		{
+			var expressions = argument[15]
+			var retExps = [];
+			for(var i = 0; i < array_length(expressions); ++i)
+			{
+				array_push(retExps,new Reference(expressions[i]));
+			}
+			retExps = helpPruneExpList(retExps,-1);
+			YieldException(retExps)
+		}
+		
+		LuaToLuaFunctions.create = function(luaFunc)
+		{
+			if(luaFunc.type != LuaTypes.FUNCTION)
+			{
+				InterpreterException("Attempted to use a non-function when creating a thread")
+			}
+			return new Reference(new Thread(luaFunc));
+		}
+		LuaToLuaFunctions.resume = function(thread)
+		{
+			//thread.val.threadTrace = thread.threadTrace;
+			/*var GMLArgs = [];
+			for(var i = 0; i < array_length(argument[15]); ++i)
+			{
+				array_push(GMLArgs,LuaToGML(argument[15][i]))
+			}*/
+			var args = argument[15];
+			array_shift(args);
+			
+			for(var i = 0; i < array_length(args);++i)
+			{
+				args[i] = new Reference(args[i])
+			}
+			
+			var retVal =  callFunction(thread.luaInternalItem,args)
+			return retVal;
+		}
+	}
 	
+	libraries = {};
+	libraries[$"basic"] = basicFunctionLibrary
+	libraries[$"coroutine"] = coroutineLibrary
+	function addLibraryFunctions(scope,libraryName = "basic")
+	{
+		var GMLtoGMLfunctions = libraries[$libraryName].GMLtoGMLfunctions;
+		var LuaToLuaFunctions = libraries[$libraryName].LuaToLuaFunctions;
+		var libraryTable = new Table();
+		var isBasic = (libraryName == "basic");
 	
 		var funcNames = variable_struct_get_names(GMLtoGMLfunctions)
 		for(var i = 0; i < array_length(funcNames); ++i)
 		{
 			var curName = funcNames[i];
-			setGMLFunction(scope,curName,GMLtoGMLfunctions[$curName],true);
+			if(isBasic)
+			{
+				setGMLFunction(scope,curName,GMLtoGMLfunctions[$curName],true);
+			}
+			else
+			{
+				libraryTable.setValue( new simpleValue(curName)
+				,(new GMFunction(GMLtoGMLfunctions[$curName],true)))
+			}
 		}
 	
 		funcNames = variable_struct_get_names(LuaToLuaFunctions);
 		for(var i = 0; i < array_length(funcNames); ++i)
 		{
 			var curName = funcNames[i];
-			setGMLFunction(scope,curName,LuaToLuaFunctions[$curName],false);		
+			if(isBasic)
+			{
+				setGMLFunction(scope,curName,LuaToLuaFunctions[$curName],false);
+			}
+			else
+			{
+				libraryTable.setValue( new simpleValue(curName)
+				,(new GMFunction(LuaToLuaFunctions[$curName],false)))
+			}
 		}
 		
-		setGMLVariable(scope,"self",-1,true);
-		setGMLVariable(scope,"other",-2,true);
-		setGMLVariable(scope,"all",-3,true);
-		setGMLVariable(scope,"noone",-4,true);
+		if(!isBasic)
+		{
+			scope.setLocalVariable(libraryName,libraryTable);
+		}
 	}
 }

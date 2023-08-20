@@ -17,7 +17,6 @@
     {"name":"Timelines","order":8,"path":"folders/Timelines.yy",},
   ],
   "ResourceOrderSettings": [
-    {"name":"Script13","order":14,"path":"scripts/Script13/Script13.yy",},
     {"name":"AST","order":1,"path":"scripts/AST/AST.yy",},
     {"name":"GMLua_Library","order":12,"path":"scripts/GMLua_Library/GMLua_Library.yy",},
     {"name":"Enviorment","order":2,"path":"scripts/Enviorment/Enviorment.yy",},
@@ -28,6 +27,7 @@
     {"name":"Parser","order":7,"path":"scripts/Parser/Parser.yy",},
     {"name":"Lexer","order":6,"path":"scripts/Lexer/Lexer.yy",},
     {"name":"Sprite1","order":1,"path":"sprites/Sprite1/Sprite1.yy",},
+    {"name":"Thread_Trace","order":13,"path":"scripts/Thread_Trace/Thread_Trace.yy",},
     {"name":"GMLua_Utility","order":11,"path":"scripts/GMLua_Utility/GMLua_Utility.yy",},
     {"name":"Interpreter","order":5,"path":"scripts/Interpreter/Interpreter.yy",},
   ],

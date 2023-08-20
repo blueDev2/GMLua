@@ -1,11 +1,11 @@
 {
   "resourceType": "GMScript",
   "resourceVersion": "1.0",
-  "name": "Script13",
+  "name": "Thread_Trace",
   "isCompatibility": false,
   "isDnD": false,
   "parent": {
-    "name": "Scripts",
-    "path": "folders/Scripts.yy",
+    "name": "GMLua",
+    "path": "folders/Scripts/GMLua.yy",
   },
 }

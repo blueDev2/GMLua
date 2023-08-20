@@ -52,11 +52,11 @@ with(global.lexer)
 			}
 			if(isLongComment)
 			{
-				while(chars.has(0) && !peek(["]"]))
+				while(chars.has(0) && !(peek(["]"]) && peek(["]"],1)))
 				{
 					chars.advance();
 				}
-				chars.advance();
+				chars.advance(2);
 				chars.skip();
 				isLongComment = false;
 				continue;
@@ -74,8 +74,9 @@ with(global.lexer)
 			if(peek(["-"]) && peek(["-"],1))
 			{
 				chars.advance(2);
-				if(match(["["]))
+				if(peek(["["]) && peek(["["],1))
 				{
+					chars.advance(2);
 					isLongComment = true;
 				}
 				else

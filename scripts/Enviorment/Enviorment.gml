@@ -28,11 +28,11 @@ function valueParent() constructor
 {
 	getValue = function()
 	{
-		throw("getValue was not overloaded by child value constructor")
+		InterpreterException("getValue was not overloaded by child value constructor")
 	}
 	setValue = function(newVal)
 	{
-		throw("setValue was not overloaded by child value constructor")
+		InterpreterException("setValue was not overloaded by child value constructor")
 	}
 }
 
@@ -75,13 +75,31 @@ function luaFunction(ASTFunc,scope) : valueParent() constructor
 	self.val = ASTFunc;
 	self.persistentScope = scope;
 	self.UID = createUniqueRefID();
+	//self.threadTrace = noone;
+	//All 16 args are treated as normal, unless the 16th arg is an array
+	//If the 16th arg is an array, all values from that array will be taken
+	//and the other args are ignored
 	self.analogousItem = function()
 	{
 		global.interpreter.globalScope = persistentScope.parent;
-		var expArgs = array_create(15,new simpleValue(undefined));
-		for(var i = 0; i < argument_count; ++i)
+		var expArgs = noone
+		//var trace = undefined;
+		if(argument_count >= 16 && typeof(argument[15]) == "array")
 		{
-			expArgs[i] = GMLToLua(argument[i]);
+			expArgs = [];
+			var GMLArgs = argument[15]
+			for(var i = 0; i < array_length(GMLArgs); ++i)
+			{
+				array_push(expArgs, GMLToLua(GMLArgs[i]));
+			}
+		}
+		else
+		{
+			expArgs = array_create(15,new simpleValue(undefined));
+			for(var i = 0; i < argument_count ; ++i)
+			{
+				expArgs[i] = GMLToLua(argument[i]);
+			}
 		}
 		//var prevScope = global.interpreter.currentScope;
 		var funcBodyExp = self;
@@ -116,6 +134,13 @@ function luaFunction(ASTFunc,scope) : valueParent() constructor
 			}
 			global.interpreter.currentScope.getVariable("...").setValue(new ExpressionList(varArgs,true));
 		}
+		
+		/*var trace = undefined
+		if(self.threadTrace != noone)
+		{
+			trace = self.threadTrace;
+			self.threadTrace = noone;
+		}*/
 		try
 		{
 			global.interpreter.helpVisitBlock(block);
@@ -153,8 +178,8 @@ function luaFunction(ASTFunc,scope) : valueParent() constructor
 		}
 		finally
 		{
-			currentScope = noone;
-			globalScope = noone;
+			global.interpreter.globalScope = noone;
+			global.interpreter.currentScope = noone;
 		}
 	}
 	type = LuaTypes.FUNCTION;
@@ -195,11 +220,183 @@ function GMFunction(funcRef,isGMLtoGML = true) :  valueParent() constructor
 	}
 }
 
-function Thread(func) :  valueParent() constructor
+function Thread(luaFunc) :  valueParent() constructor
 {
-	tempScope = new Scope();
-	self.val = func;
+	self.val = luaFunc;
 	type = LuaTypes.THREAD;
+	//self.persistentScope = noone;
+	//threadTrace of undefined represents an unexecuted thread
+	//threadTrace of noone represents a thread that has returned a value
+	//(and thus is terminated)
+	self.threadTrace = undefined;
+	self.UID = createUniqueRefID();
+	
+	//All 16 args are treated as normal, unless the 16th arg is an array
+	//If the 16th arg is an array, all values from that array will be taken
+	//and the other args are ignored
+	//LuatoLua Function
+	self.luaInternalItem = function()
+	{
+		
+		var trace = threadTrace;
+		var thread = self;
+		var pGlobalScope = global.interpreter.globalScope
+		var pCurrentScope = global.interpreter.currentScope
+		
+		
+		if(trace == noone)
+		{
+			return([new Reference(new simpleValue(false)),
+			new Reference(new simpleValue("cannot resume dead coroutine"))])
+		}
+		
+		if(!is_undefined(trace) && array_length(trace) != 0)
+		{
+			trace[0].value = argument[15]
+		}
+		
+		with(val)
+		{
+			global.interpreter.globalScope = persistentScope.parent;
+			var funcBodyExp = self;
+			var funcBodyAST = funcBodyExp.val;
+			var block = funcBodyAST.block
+			if(is_undefined(trace) || array_length(trace) == 0)
+			{
+				var expArgs = argument[15];
+				//var expArgs = noone
+				//var trace = undefined;
+				//var prevScope = global.interpreter.currentScope;
+
+				global.interpreter.currentScope = funcBodyExp.persistentScope;
+			
+				global.interpreter.currentScope = new Scope(global.interpreter.currentScope);
+			
+				var isVarArgs = funcBodyAST.isVarArgs;
+				var paramNames = [];
+				for(var i = 0; i < array_length(funcBodyAST.paramlist); ++i)
+				{
+					array_push(paramNames,funcBodyAST.paramlist[i])
+				}
+
+				for(var i = 0;i < array_length(paramNames); ++i)
+				{
+					var curExpression = new simpleValue(undefined);
+					if(i < array_length(expArgs))
+					{
+						curExpression = expArgs[i].getValue();
+					}
+					global.interpreter.currentScope.setLocalVariable(paramNames[i],curExpression);
+				}
+				if(isVarArgs)
+				{
+					var varArgs = []
+					for(var i = array_length(paramNames); i < array_length(expArgs); ++i)
+					{
+						array_push(varArgs,new Reference(expArgs[i]));
+					}
+					global.interpreter.currentScope.getVariable("...").setValue(new ExpressionList(varArgs,true));
+				}
+			}
+			else
+			{
+				var thisTrace = array_pop(trace)
+				global.interpreter.currentScope =thisTrace.scope
+			}
+			try
+			{
+				global.interpreter.helpVisitBlock(block,trace);
+				thread.threadTrace = noone;
+				return [new Reference(new simpleValue(true))];
+			}
+			catch(e)
+			{
+				if(!variable_struct_exists(e,"type"))
+				{
+					throw(e);
+				}
+				if(e.type == ExceptionType.BREAK || e.type == ExceptionType.JUMP)
+				{
+					e.type = ExceptionType.UNCATCHABLE;
+				}
+				if(e.type == ExceptionType.RETURN || e.type == ExceptionType.YIELD)
+				{
+					var retValue = (e.value);
+					/*if(typeof(retValue) == "array")
+					{
+						var retArray = [];
+						for(var i = 0; i < array_length(retValue); ++i)
+						{
+							array_push(retArray,LuaToGML(retValue[i].getValue()));
+						}
+						retValue =  retArray;
+					}
+					else
+					{
+						retValue = LuaToGML(retValue.getValue());
+					}*/
+					if(e.type == ExceptionType.YIELD)
+					{
+						var trace = new Thread_Trace(Expression.FUNCTIONCALL,global.interpreter.currentScope)
+						array_push(e.threadTraces,trace)
+						thread.threadTrace = e.threadTraces;
+					}
+					else
+					{
+						var fullVal = [new Reference(new simpleValue(true))];
+						if(typeof(retValue) == "array")
+						{
+							for(var i = 0; i < array_length(retValue);++i)
+							{
+								array_push(fullVal,retValue[i]);
+							}
+						}
+						else
+						{
+							array_push(fullVal,retValue)
+						}
+						thread.threadTrace = noone;
+						return fullVal;
+					}
+					return retValue
+				}
+				if(variable_struct_exists(e,"lineNumber") && e.lineNumber == -1)
+				{
+					e.lineNumber = funcBodyAST.firstLine;
+				}
+				global.HandleGMLuaExceptions(e,persistentScope.parent.associatedFilePath)
+			}
+			finally
+			{
+				global.interpreter.globalScope = pGlobalScope 
+				global.interpreter.currentScope = pCurrentScope 
+			}
+		}
+	}
+	
+	//All 16 args are treated as normal, unless the 16th arg is an array
+	//If the 16th arg is an array, all values from that array will be taken
+	//and the other args are ignored
+	//GMLtoGML Function
+	self.analogousItem = function()
+	{
+		var args = [];
+		for(var i = 0; i < argument_count; ++i)
+		{
+			array_push(args,argument[i]);
+		}
+		var retValue = callFunction(luaInternalItem,args);
+		if(typeof(retValue) == "array")
+		{
+			var retArray = [];
+			for(var i = 0; i < array_length(retValue); ++i)
+			{
+				array_push(retArray,LuaToGML(retValue[i].getValue()));
+			}
+			return retArray;
+		}
+		return LuaToGML(retValue.getValue())
+	}
 	getValue = function()
 	{
 		return val;
@@ -280,15 +477,23 @@ function Table(newVal = {}, newAnalogousObject = {}) constructor
 			//Function or GMFunction
 			else if(is_method(analogousItem))
 			{
-				if((!is_undefined(expression))&&(expression.type == LuaTypes.GMFUNCTION)
-				&& expression.val == analogousItem)
+				if(!is_undefined(expression))
 				{
-					needsUpdate = false;
-				}
-				else if((!is_undefined(expression)) && (expression.type == LuaTypes.FUNCTION) &&
-				(expression.analogousItem == analogousItem))
-				{
-					needsUpdate = false;
+					if((expression.type == LuaTypes.GMFUNCTION)
+					&& (expression.val == analogousItem))
+					{
+						needsUpdate = false;
+					}
+					else if((expression.type == LuaTypes.FUNCTION) &&
+					(expression.analogousItem == analogousItem))
+					{
+						needsUpdate = false;
+					}
+					else if((expression.type == LuaTypes.THREAD) &&
+					(expression.analogousItem == analogousItem))
+					{
+						needsUpdate = false;
+					}
 				}
 
 			}
@@ -362,6 +567,9 @@ function Table(newVal = {}, newAnalogousObject = {}) constructor
 					refToValue.setValue(newVal.analogousObject);
 				break;
 				case LuaTypes.FUNCTION:
+					refToValue.setValue(newVal.analogousItem);
+				break
+				case LuaTypes.THREAD:
 					refToValue.setValue(newVal.analogousItem);
 				break
 				default:
@@ -466,7 +674,7 @@ function LuaToGML(luaItem)
 	{
 		return luaItem.val;
 	}
-	else if(luaItem.type == LuaTypes.FUNCTION)
+	else if(luaItem.type == LuaTypes.FUNCTION || luaItem.type == LuaTypes.THREAD)
 	{
 		return luaItem.analogousItem;
 	}

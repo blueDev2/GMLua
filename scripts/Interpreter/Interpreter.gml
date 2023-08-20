@@ -14,9 +14,14 @@ with(global.interpreter)
 	{
 		scope.associatedFilePath = chunk.sourceFilePath+chunk.sourceFileName
 		globalScope = scope;
+		setGMLVariable(scope,"self",-1,true);
+		setGMLVariable(scope,"other",-2,true);
+		setGMLVariable(scope,"all",-3,true);
+		setGMLVariable(scope,"noone",-4,true);
 		if(addBasicLibrary)
 		{
-			global.LuaLibrary.addBasicLibraryFunctions(globalScope)
+			global.LuaLibrary.addLibraryFunctions(globalScope)
+			global.LuaLibrary.addLibraryFunctions(globalScope,"coroutine");
 		}
 		currentScope = new Scope(scope);
 		try
@@ -33,16 +38,25 @@ with(global.interpreter)
 		return scope;
 	}
 
-	function helpVisitBlock(block)
+	function helpVisitBlock(block,threadTrace = undefined)
 	{
 		var i = 0;
+		if(!is_undefined(threadTrace)&& array_length(threadTrace) != 0)
+		{
+			var trace = array_pop(threadTrace)
+			i = trace.index;
+		}
 		while(i < array_length(block.statements))
 		{
 			try
 			{
 				for(; i < array_length(block.statements); ++i)
 				{
-					visitStatement(block.statements[i]);
+					if(!is_undefined(threadTrace)&& array_length(threadTrace) == 0)
+					{
+						threadTrace = undefined
+					}
+					visitStatement(block.statements[i],threadTrace);
 				}
 			}
 			catch(e)
@@ -50,6 +64,10 @@ with(global.interpreter)
 				if(is_instanceof(e,Scope))
 				{
 					throw(e)
+				}
+				if(!variable_struct_exists(e,"type"))
+				{
+					throw(e);
 				}
 				if(e.type == ExceptionType.JUMP)
 				{
@@ -61,6 +79,12 @@ with(global.interpreter)
 					{
 						throw(e)
 					}
+				}
+				else if(e.type == ExceptionType.YIELD)
+				{
+					var trace = new Thread_Trace((-1),,i)
+					array_push(e.threadTraces,trace)
+					throw(e)	
 				}
 				else
 				{
@@ -82,7 +106,7 @@ with(global.interpreter)
 		}
 	}
 
-	visitExpression = function(visitor)
+	visitExpression = function(visitor,threadTrace = undefined)
 	{
 		switch(visitor.expressionType)
 		{
@@ -96,7 +120,7 @@ with(global.interpreter)
 				return visitFunctionBody(visitor);
 			break;
 			case Expression.FUNCTIONCALL:
-				return visitFunctionCall(visitor);
+				return visitFunctionCall(visitor,threadTrace);
 			break;
 			case Expression.GROUP:
 				return visitGroup(visitor);
@@ -115,57 +139,57 @@ with(global.interpreter)
 			break
 		}
 	}
-	visitStatement = function(visitor)
+	visitStatement = function(visitor,threadTrace = undefined)
 	{
 		try
 		{
 			if(variable_struct_get(visitor,"expressionType") == Expression.FUNCTIONCALL)
-		{
-			visitFunctionCall(visitor);	
-			return;
-		}
+			{
+				visitFunctionCall(visitor,threadTrace);	
+				return;
+			}
 			switch(visitor.statementType)
-		{
-			case Statement.ASSIGNMENT:
-				visitAssignment(visitor);
-			break;
-			case Statement.BREAK:
-				visitBreak(visitor);
-			break;
-			case Statement.DECLARATION:
-				visitDeclaration(visitor);
-			break;
-			case Statement.DO:
-				visitDo(visitor);
-			break;
-			case Statement.GENERICFOR:
-				visitGenericFor(visitor);
-			break;
-			case Statement.NUMERICFOR:
-				visitNumericFor(visitor);
-			break
-			case Statement.GOTO:
-				visitGoto(visitor);
-			break;
-			case Statement.IF:
-				visitIf(visitor);
-			break;
-			case Statement.LABEL:
-				visitLabel(visitor);
-			break;
-			case Statement.REPEAT:
-				visitRepeat(visitor);
-			break;
-			case Statement.RETURN:
-				visitReturn(visitor);
-			break;
-			case Statement.WHILE:
-				visitWhile(visitor);
-			break;
-			default:
-				InterpreterException("Attempted to visit a statement, but visitor is not a statement");
-			break;
-		}
+			{
+				case Statement.ASSIGNMENT:
+					visitAssignment(visitor,threadTrace);
+				break;
+				case Statement.BREAK:
+					visitBreak(visitor);
+				break;
+				case Statement.DECLARATION:
+					visitDeclaration(visitor,threadTrace);
+				break;
+				case Statement.DO:
+					visitDo(visitor,threadTrace);
+				break;
+				case Statement.GENERICFOR:
+					visitGenericFor(visitor,threadTrace);
+				break;
+				case Statement.NUMERICFOR:
+					visitNumericFor(visitor,threadTrace);
+				break
+				case Statement.GOTO:
+					visitGoto(visitor);
+				break;
+				case Statement.IF:
+					visitIf(visitor,threadTrace);
+				break;
+				case Statement.LABEL:
+					visitLabel(visitor);
+				break;
+				case Statement.REPEAT:
+					visitRepeat(visitor,threadTrace);
+				break;
+				case Statement.RETURN:
+					visitReturn(visitor,threadTrace);
+				break;
+				case Statement.WHILE:
+					visitWhile(visitor,threadTrace);
+				break;
+				default:
+					InterpreterException("Attempted to visit a statement, but visitor is not a statement");
+				break;
+			}
 		}
 		catch(e)
 		{
@@ -173,28 +197,57 @@ with(global.interpreter)
 			{
 				throw(e);
 			}
-			if(e.lineNumber == -1)
+			if(!variable_struct_exists(e,"type"))
 			{
-				e.lineNumber = visitor.firstLine;
+				throw(e);
 			}
+			if(variable_struct_get(visitor,"expressionType") != Expression.FUNCTIONCALL)
+			array_push(e.lineNumbers, visitor.firstLine);
 			throw(e)
 		}
 	}
 	//Statements
-	visitAssignment = function(visitor)
+	visitAssignment = function(visitor,threadTrace = undefined)
 	{
 		var lAstExps = visitor.names;
 		var rAstExps = visitor.expressions;
 		var lExpRefs = [];
 		var rExpRefs = [];
+		
+		var i = 0
+		var trace = noone;
+		if(!is_undefined(threadTrace) && array_length(threadTrace) != 0)
+		{
+			trace = array_pop(threadTrace);
+			i = trace.index;
+			rExpRefs = trace.rExpRefs;
+		}
+		
+		try
+		{
+			for(i = 0; i < array_length(rAstExps); ++i)
+			{
+				array_push(rExpRefs,visitExpression(rAstExps[i],threadTrace));
+			}
+		}
+		catch(e)
+		{
+			if(!variable_struct_exists(e,"type"))
+			{
+				throw(e);
+			}
+			if(e.type == ExceptionType.YIELD)
+			{
+				var trace = new Thread_Trace(Statement.ASSIGNMENT,,i)
+				trace.rExpRefs = rExpRefs;
+				array_push(e.threadTraces,trace);
+			}
+			throw(e)
+		}
+		
 		for(var i = 0; i < array_length(lAstExps); ++i)
 		{
 			array_push(lExpRefs,visitExpression(lAstExps[i]));
-		}
-		
-		for(var i = 0; i < array_length(rAstExps); ++i)
-		{
-			array_push(rExpRefs,visitExpression(rAstExps[i]));
 		}
 		
 		rExpRefs = helpPruneExpList(rExpRefs,array_length(lExpRefs));
@@ -220,17 +273,42 @@ with(global.interpreter)
 	{
 		BreakException();
 	}
-	visitDeclaration = function(visitor)
+	visitDeclaration = function(visitor,threadTrace = undefined)
 	{
 		var lAstExps = visitor.names;
 		var rAstExps = visitor.expressions;
 
 		var rExpRefs = [];
 		
-		
-		for(var i = 0; i < array_length(rAstExps); ++i)
+		var i = 0
+		var trace = noone;
+		if(!is_undefined(threadTrace) && array_length(threadTrace) != 0)
 		{
-			array_push(rExpRefs,visitExpression(rAstExps[i]));
+			trace = array_pop(threadTrace);
+			i = trace.index;
+			rExpRefs = trace.rExpRefs;
+		}
+		
+		try
+		{
+			for(i = 0; i < array_length(rAstExps); ++i)
+			{
+				array_push(rExpRefs,visitExpression(rAstExps[i],threadTrace));
+			}
+		}
+		catch(e)
+		{
+			if(!variable_struct_exists(e,"type"))
+			{
+				throw(e);
+			}
+			if(e.type == ExceptionType.YIELD)
+			{
+				var trace = new Thread_Trace(Statement.DECLARATION,,i)
+				trace.rExpRefs = rExpRefs;
+				array_push(e.threadTraces,trace);
+			}
+			throw(e)
 		}
 		
 		rExpRefs = helpPruneExpList(rExpRefs,array_length(lAstExps));
@@ -247,74 +325,130 @@ with(global.interpreter)
 		}
 		
 	}
-	visitDo = function(visitor)
+	visitDo = function(visitor,threadTrace = undefined)
 	{
-		currentScope = new Scope(currentScope);
+		if(!is_undefined(threadTrace)&& array_length(threadTrace) != 0)
+		{
+			var trace = array_pop(threadTrace);
+			currentScope = trace.scope;
+		}
+		else
+		{
+			currentScope = new Scope(currentScope);
+		}
 		try
 		{	
-			helpVisitBlock(visitor.block);
+			helpVisitBlock(visitor.block,threadTrace);
 		}
-		//Don't deal with exceptions, simply peel off one layer of scope
+		catch(e)
+		{
+			if(!variable_struct_exists(e,"type"))
+			{
+				throw(e);
+			}
+			if(e.type == ExceptionType.YIELD)
+			{
+				array_push(e.threadTraces,new Thread_Trace(Statement.DO,currentScope));
+			}
+		}
 		finally
 		{
 			currentScope = currentScope.parent;
 		}
 	}
-	visitGenericFor = function(visitor)
+	
+	visitGenericFor = function(visitor,threadTrace = undefined)
 	{
 		var namelist = visitor.namelist;
 		var explist = visitor.explist;
 		var block = visitor.block;
 		
-		var rExpRefs = [];
-		for(var i = 0; i < array_length(explist); ++i)
-		{
-			array_push(rExpRefs, visitExpression(explist[i]));
-		}
-		rExpRefs = helpPruneExpList(rExpRefs,3);
-		currentScope = new Scope(currentScope);
-		
-		var iterExp = rExpRefs[0].getValue();
-		var invariantExp = rExpRefs[1].getValue();
-		var controlExp =  rExpRefs[2].getValue();
-		
-		currentScope.setLocalVariable("0_f",iterExp)
-		currentScope.setLocalVariable("0_s",invariantExp)
-		currentScope.setLocalVariable("0_var",controlExp)
-		
-		var controlVariable = currentScope.getVariable("0_var");
 		var iterCall = new ASTFunctionCall(new ASTAccess("0_f"),
-		[new ASTAccess("0_s"), new ASTAccess("0_var")]);
+		[new ASTAccess("0_s"), new ASTAccess("0_var")]);;
+		var controlVariable = noone;
+		
+		var hasThreadTrace = !is_undefined(threadTrace) && array_length(threadTrace) != 0
+		var trace = noone
+		
+		if(hasThreadTrace)
+		{
+			trace = array_pop(threadTrace);
+			currentScope = trace.scope
+			controlVariable = trace.controlVariable
+		}
+		
+		if(!hasThreadTrace)
+		{
+			var rExpRefs = [];
+			for(var i = 0; i < array_length(explist); ++i)
+			{
+				array_push(rExpRefs, visitExpression(explist[i]));
+			}
+			rExpRefs = helpPruneExpList(rExpRefs,3);
+			currentScope = new Scope(currentScope);
+		
+			var iterExp = rExpRefs[0].getValue();
+			var invariantExp = rExpRefs[1].getValue();
+			var controlExp =  rExpRefs[2].getValue();
+		
+			currentScope.setLocalVariable("0_f",iterExp)
+			currentScope.setLocalVariable("0_s",invariantExp)
+			currentScope.setLocalVariable("0_var",controlExp)
+		
+			controlVariable = currentScope.getVariable("0_var");
+		}
+		
 		var caughtBreak = false;
 		while(!caughtBreak)
 		{
-			var varValueRefs = visitExpression(iterCall);
-			varValueRefs = helpPruneExpList(varValueRefs,array_length(namelist));
-			if(typeof(varValueRefs) != "array")
+			if(!hasThreadTrace)
 			{
-				varValueRefs = [varValueRefs]
+				var varValueRefs = noone;
+				varValueRefs = visitExpression(iterCall);
+				varValueRefs = helpPruneExpList(varValueRefs,array_length(namelist));
+				if(typeof(varValueRefs) != "array")
+				{
+					varValueRefs = [varValueRefs]
+				}
+				currentScope = new Scope(currentScope);
+				for(var i = 0; i < array_length(namelist); ++i)
+				{
+					currentScope.setLocalVariable(namelist[i],varValueRefs[i].getValue());
+				}
+				controlVariable.setValue(currentScope.getVariable(namelist[0]).getValue())
+				if(controlVariable.getValue().type = LuaTypes.NIL)
+				{
+					currentScope = currentScope.parent.parent;
+					return;
+				}
 			}
-			currentScope = new Scope(currentScope);
-			for(var i = 0; i < array_length(namelist); ++i)
+			else
 			{
-				currentScope.setLocalVariable(namelist[i],varValueRefs[i].getValue());
-			}
-			controlVariable.setValue(currentScope.getVariable(namelist[0]).getValue())
-			if(controlVariable.getValue().type = LuaTypes.NIL)
-			{
-				currentScope = currentScope.parent.parent;
-				return;
+				hasThreadTrace = false;
 			}
 			try
 			{
-				helpVisitBlock(block);
+				helpVisitBlock(block,threadTrace);
 			}
 			catch(e)
 			{
+				var tempCurScope = currentScope
 				currentScope = currentScope.parent;
+				if(!variable_struct_exists(e,"type"))
+				{
+					throw(e);
+				}
 				if(e.type ==  ExceptionType.BREAK)
 				{
 					caughtBreak = true;					
+				}
+				else if(e.type == ExceptionType.YIELD)
+				{
+					var trace = new Thread_Trace(Statement.GENERICFOR,
+					tempCurScope)
+					trace.controlVariable = controlVariable;
+					array_push(e.threadTraces,trace);
+					throw(e);
 				}
 				else
 				{
@@ -329,39 +463,67 @@ with(global.interpreter)
 			}
 		}
 	}
-	visitNumericFor = function(visitor)
+	visitNumericFor = function(visitor,threadTrace = undefined)
 	{
-		currentScope = new Scope(currentScope);
-		var initalName = visitor.initalName;
-		var initalExpression = visitExpression(visitor.inital).getValue();
-		var limitExpression = visitExpression(visitor.limit).getValue();
-		var stepExpression = visitExpression(visitor.step).getValue();
-		currentScope.setLocalVariable(initalName,initalExpression)
-		
-		if(initalExpression.type != LuaTypes.INTEGER ||
-		stepExpression.type != LuaTypes.INTEGER)
-		{
-			initalExpression = GMLToLua(real(initalExpression.val));
-			limitExpression = GMLToLua(real(limitExpression.val));
-			stepExpression = GMLToLua(real(stepExpression.val));
-		}
-		var limitVal = limitExpression.val;
-		var stepVal = stepExpression.val;
-		if(stepVal == 0)
-		{
-			InterpreterException("Step cannot be 0");	
-		}
-		var controlVariable = currentScope.getVariable(initalName)
-		var controlVal = controlVariable.getValue().val;
-		var isUpperBound = (stepVal > 0);
+		var limitVal;
+		var stepVal;
+		var controlVariable;
+		var isUpperBound;
 		var caughtBreak = false;
+		var hasThreadTrace = !is_undefined(threadTrace) && array_length(threadTrace) != 0
+		var trace = noone;
+		
+		if(!hasThreadTrace)
+		{
+			var initalName = visitor.initalName;
+			var initalExpression = visitExpression(visitor.inital).getValue();
+			var limitExpression = visitExpression(visitor.limit).getValue();
+			var stepExpression = visitExpression(visitor.step).getValue();
+		
+			currentScope = new Scope(currentScope);
+			currentScope.setLocalVariable(initalName,initalExpression)
+		
+			if(initalExpression.type != LuaTypes.INTEGER ||
+			stepExpression.type != LuaTypes.INTEGER)
+			{
+				initalExpression = GMLToLua(real(initalExpression.val));
+				limitExpression = GMLToLua(real(limitExpression.val));
+				stepExpression = GMLToLua(real(stepExpression.val));
+			}
+			limitVal = limitExpression.val;
+			stepVal = stepExpression.val;
+			if(stepVal == 0)
+			{
+				InterpreterException("Step cannot be 0");	
+			}
+			controlVariable = currentScope.getVariable(initalName)
+			isUpperBound = (stepVal > 0);
+		}
+		else
+		{
+			trace = array_pop(threadTrace)
+			limitVal = trace.limitVal;
+			stepVal = trace.stepVal;
+			controlVariable = trace.controlVariable;
+			isUpperBound = trace.isUpperBound;
+		}
+		
+		var controlVal = controlVariable.getValue().val;
 		try
 		{
 			while((isUpperBound && controlVal <= limitVal) || 
 			(!isUpperBound && controlVal >= limitVal))
 			{
-				currentScope = new Scope(currentScope);
-				helpVisitBlock(visitor.block);
+				if(hasThreadTrace)
+				{
+					currentScope = trace.scope;
+					hasThreadTrace = false;
+				}
+				else
+				{
+					currentScope = new Scope(currentScope);
+				}
+				helpVisitBlock(visitor.block,threadTrace);
 				//If an error occurs, descoping is missed
 				currentScope = currentScope.parent;
 				
@@ -373,15 +535,25 @@ with(global.interpreter)
 		{
 			//descope to account for the inner block descoping missed
 			//due to the exception
-			currentScope = currentScope.parent;
+			if(!variable_struct_exists(e,"type"))
+			{
+				throw(e);
+			}
 			if(e.type ==  ExceptionType.BREAK)
 			{
 				caughtBreak = true;					
 			}
-			else
+			if(e.type == ExceptionType.YIELD)
 			{
+				var trace = new Thread_Trace(Statement.NUMERICFOR,currentScope);
+				trace.controlVariable = controlVariable;
+				trace.isUpperBound = isUpperBound;
+				trace.limitVal = limitVal;
+				trace.stepVal = stepVal;
+				array_push(e.threadTraces,trace);
 				throw(e);
 			}
+			currentScope = currentScope.parent;
 		}
 		finally
 		{
@@ -394,14 +566,22 @@ with(global.interpreter)
 	{
 		JumpException(visitor)
 	}
-	visitIf = function(visitor)
+	visitIf = function(visitor,threadTrace = undefined)
 	{
 		var conditions = visitor.conditions;
 		var blocks = visitor.blocks;
 		var i = 0;
 		//Find the first condition that returns a non-false and non-nil
 		//expression
-		while(i < array_length(conditions))
+		var hasThreadTrace = !is_undefined(threadTrace) && array_length(threadTrace) != 0;
+		var trace = noone;
+		if(hasThreadTrace)
+		{
+			trace = array_pop(threadTrace)
+			i = trace.index
+		}
+		
+		while(!hasThreadTrace && i < array_length(conditions))
 		{
 			var conditionExpression = visitExpression(conditions[i]).getValue();
 			if(isExpressionFalsy(conditionExpression))
@@ -415,10 +595,30 @@ with(global.interpreter)
 		}
 		if(i < array_length(blocks))
 		{
-			currentScope = new Scope(currentScope);
+			if(hasThreadTrace)
+			{
+				currentScope = trace.scope
+			}
+			else
+			{
+				currentScope = new Scope(currentScope);
+			}
 			try
 			{
-				helpVisitBlock(blocks[i])
+				helpVisitBlock(blocks[i],threadTrace)
+			}
+			catch(e)
+			{
+				if(!variable_struct_exists(e,"type"))
+				{
+					throw(e);
+				}
+				if(e.type == ExceptionType.YIELD)
+				{
+					var trace = new Thread_Trace(Statement.IF,currentScope,i)
+					array_push(e.threadTraces,trace);
+				}
+				throw(e)
 			}
 			finally
 			{
@@ -426,32 +626,48 @@ with(global.interpreter)
 			}
 		}
 	}
-	//Should be impossible, labels are discarded by parser.
-	visitLabel = function(visitor)
-	{
-		InterpreterException("A label has been visted, there is an issue with the interpreter or parser");
-	}
-	visitRepeat = function(visitor)
-	{
-			
+	visitRepeat = function(visitor,threadTrace = undefined)
+	{			
 		var condition =  visitor.condition;
 		var block = visitor.block;
 		var caughtBreak = false;
+		var hasThreadTrace = !is_undefined(threadTrace) && array_length(threadTrace) != 0;
+		var trace = noone;
+		if(hasThreadTrace)
+		{
+			trace = array_pop(threadTrace)
+		}
 			
 		do
 		{
-			currentScope = new Scope(currentScope);
+			if(hasThreadTrace)
+			{
+				currentScope = trace.scope;
+			}
+			else
+			{
+				currentScope = new Scope(currentScope);
+			}
+			hasThreadTrace = false;
 			try
 			{	
-				helpVisitBlock(block);
+				helpVisitBlock(block,threadTrace);
 			}
-			//Break exceptions are allowed
-			//All other exceptions are rethrown
 			catch(e)
 			{
+				if(!variable_struct_exists(e,"type"))
+				{
+					throw(e);
+				}
 				if(e.type ==  ExceptionType.BREAK)
 				{
 					caughtBreak = true;					
+				}
+				else if(e.type == ExceptionType.YIELD)
+				{
+					var trace = new Thread_Trace(Statement.REPEAT,currentScope)
+					array_push(e.threadTraces,trace);
+					throw(e)
 				}
 				else
 				{
@@ -472,37 +688,95 @@ with(global.interpreter)
 		until(caughtBreak || !isExpressionFalsy(conditionExpression))
 		
 	}
-	visitReturn = function(visitor)
+	visitReturn = function(visitor,threadTrace = undefined)
 	{
 		var expressions = visitor.expressions;
 		var retExps = [];
-		for(var i = 0; i < array_length(expressions); ++i)
+		var trace = noone
+		if(!is_undefined(threadTrace) && array_length(threadTrace) != 0)
 		{
-			array_push(retExps,visitExpression(expressions[i]));
+			trace = array_pop(threadTrace);
+		}
+		var i = 0
+		if(trace != noone)
+		{
+			i = trace.index;
+		}
+		for(; i < array_length(expressions); ++i)
+		{
+			
+			try
+			{
+				array_push(retExps,visitExpression(expressions[i],threadTrace));
+			}
+			catch(e)
+			{
+				if(!variable_struct_exists(e,"type"))
+				{
+					throw(e);
+				}
+				if(e.type == ExceptionType.YIELD)
+				{
+					var trace = new Thread_Trace(Statement.RETURN,,i)
+					array_push(e.threadTraces,trace)
+				}
+				throw(e)
+			}
 		}
 		retExps = helpPruneExpList(retExps,-1);
 		ReturnException(retExps);
 	}
-	visitWhile = function(visitor)
+	visitWhile = function(visitor,threadTrace = undefined)
 	{
 		var condition =  visitor.condition;
 		var block = visitor.block;
-		var conditionExpression = visitExpression(condition).getValue();
+		var conditionExpression = noone;
+		
 		var caughtBreak = false;
-		while(!caughtBreak && !isExpressionFalsy(conditionExpression))
+		
+		var hasThreadTrace = !is_undefined(threadTrace) && array_length(threadTrace) != 0;
+		var trace = noone;
+		if(hasThreadTrace)
 		{
-			currentScope = new Scope(currentScope);
+			trace = array_pop(threadTrace)
+		}
+		else
+		{
+			conditionExpression = visitExpression(condition).getValue();
+		}
+		
+		while(hasThreadTrace || (!caughtBreak && !isExpressionFalsy(conditionExpression)))
+		{
+			if(hasThreadTrace)
+			{
+				currentScope = trace.scope
+				hasThreadTrace = false;
+			}
+			else
+			{
+				currentScope = new Scope(currentScope);
+			}
 			try
 			{	
-				helpVisitBlock(block);
+				helpVisitBlock(block,threadTrace);
 			}
 			//Break exceptions are allowed
 			//All other exceptions are rethrown
 			catch(e)
 			{
+				if(!variable_struct_exists(e,"type"))
+				{
+					throw(e);
+				}
 				if(e.type ==  ExceptionType.BREAK)
 				{
 					caughtBreak = true;					
+				}
+				else if(e.type == ExceptionType.YIELD)
+				{
+					var trace = new Thread_Trace(Statement.WHILE,currentScope)
+					array_push(e.threadTraces,trace);
+					throw(e);
 				}
 				else
 				{
@@ -518,6 +792,12 @@ with(global.interpreter)
 				conditionExpression = visitExpression(condition).getValue();
 			}
 		}
+	}
+	
+	//Should be impossible, labels are discarded by parser.
+	visitLabel = function(visitor)
+	{
+		InterpreterException("A label has been visted, there is an issue with the interpreter or parser");
 	}
 
 
@@ -562,7 +842,9 @@ with(global.interpreter)
 			getValue = function()
 			{
 				var rawValExpression = tableRef.getValue(key);
-				if(rawValExpression.type == LuaTypes.NIL)
+				if(rawValExpression.type == LuaTypes.NIL &&
+				tableRef.metatable != noone && 
+				!is_undefined(tableRef.metatable.getValueFromVal("__index")))
 				{
 					rawValExpression = interpreter.callMetamethod("[]",tableRef,key);
 				}
@@ -572,7 +854,7 @@ with(global.interpreter)
 			{
 				var rawValExpression = tableRef.getValue(key);
 				if(tableRef.metatable != noone && 
-				tableRef.metatable.getValueFromVal("__newindex") != undefined  && 
+				!is_undefined(tableRef.metatable.getValueFromVal("__newindex")) && 
 				rawValExpression.type == LuaTypes.NIL)
 				{
 					rawValExpression = interpreter.callMetamethod("=[]",tableRef,key,newVal);
@@ -591,7 +873,7 @@ with(global.interpreter)
 		var curOperator = visitor.operator;
 		var opIsAnd = (curOperator == "and");
 		var opIsOr = (curOperator == "or");
-		var firstExp = visitExpression(visitor.first).getValue();
+		var firstExp = (helpPruneExpList(visitExpression(visitor.first))).getValue();
 		var firstFalsy = (firstExp.val == false || firstExp.val == undefined);
 		//Short circut eval
 		if(opIsAnd && firstFalsy)
@@ -602,7 +884,7 @@ with(global.interpreter)
 		{
 			return new Reference(firstExp);
 		}
-		var secondExp = visitExpression(visitor.second).getValue();
+		var secondExp = (helpPruneExpList(visitExpression(visitor.second))).getValue();
 		if(opIsAnd || opIsOr)
 		{
 			return new Reference(secondExp);
@@ -622,82 +904,110 @@ with(global.interpreter)
 		return new Reference(new luaFunction(visitor,pScope));	
 	}
 	
-	visitFunctionCall = function(visitor)
+	visitFunctionCall = function(visitor,threadTrace = undefined)
 	{
-		var funcBody = visitExpression(visitor.name)
+		var trace = noone;
+		if(!is_undefined(threadTrace) && array_length(threadTrace) != 0)
+		{
+			trace = array_pop(threadTrace);
+		}
+		
+		if(trace != noone && trace.statementType == Statement.RETURN)
+		{
+			return trace.value
+		}
+		var funcBodyExp = noone;
 		var expArgsRefs = [];
 		var expArgs = [];
-		var funcBodyExp = noone;
-		var isMethod = (visitor.finalIndex != noone)
-		if(isMethod)
-		{
-			array_push(expArgs,funcBody);
-			var finalIndexExp = visitExpression(finalIndex).getValue();
-			funcBodyExp = funcBody.getValue().getValue(finalIndexExp);
-		}
-		else
-		{
-			funcBodyExp = funcBody.getValue();
-		}
-		var ASTArgs = visitor.args;
-		for(var i = 0; i < array_length(ASTArgs); ++i)
-		{
-			array_push(expArgsRefs,visitExpression(ASTArgs[i]));
-		}
 		
-		expArgsRefs = helpPruneExpList(expArgsRefs,-1);
-		if(typeof(expArgsRefs) != "array")
+		if(trace == noone)
 		{
-			expArgsRefs = [expArgsRefs];
-		}
-		
-		for(var i = 0; i < array_length(expArgsRefs); ++i)
-		{
-			array_push(expArgs,expArgsRefs[i].getValue());
-		}
-		
-		if(funcBodyExp.type == LuaTypes.FUNCTION)
-		{
-			var prevScope = currentScope;
-			var funcBodyAST = funcBodyExp.val;
-			currentScope = funcBodyExp.persistentScope;
-			
-			currentScope = new Scope(currentScope);
-			
-			var isVarArgs = funcBodyAST.isVarArgs;
-			var paramNames = [];
-			var block = funcBodyAST.block
-			for(var i = 0; i < array_length(funcBodyAST.paramlist); ++i)
+			var funcBody = visitExpression(visitor.name)
+			var isMethod = (visitor.finalIndex != noone)
+			if(isMethod)
 			{
-				array_push(paramNames,funcBodyAST.paramlist[i])
+				array_push(expArgs,funcBody);
+				var finalIndexExp = visitExpression(finalIndex).getValue();
+				funcBodyExp = funcBody.getValue().getValue(finalIndexExp);
 			}
+			else
+			{
+				funcBodyExp = funcBody.getValue();
+			}
+			var ASTArgs = visitor.args;
+			for(var i = 0; i < array_length(ASTArgs); ++i)
+			{
+				array_push(expArgsRefs,visitExpression(ASTArgs[i]));
+			}
+		
+			expArgsRefs = helpPruneExpList(expArgsRefs,-1);
+			if(typeof(expArgsRefs) != "array")
+			{
+				expArgsRefs = [expArgsRefs];
+			}
+		
+			for(var i = 0; i < array_length(expArgsRefs); ++i)
+			{
+				array_push(expArgs,expArgsRefs[i].getValue());
+			}
+		}
+		if(trace != noone || funcBodyExp.type == LuaTypes.FUNCTION)
+		{
+			var prevScope = noone
+			var block = noone
+			if(trace == noone)
+			{
+				prevScope = currentScope;
+				var funcBodyAST = funcBodyExp.val;
+				currentScope = funcBodyExp.persistentScope;
+			
+				currentScope = new Scope(currentScope);
+			
+				var isVarArgs = funcBodyAST.isVarArgs;
+				var paramNames = [];
+				block = funcBodyAST.block
+				for(var i = 0; i < array_length(funcBodyAST.paramlist); ++i)
+				{
+					array_push(paramNames,funcBodyAST.paramlist[i])
+				}
 
-			for(var i = 0;i < array_length(paramNames); ++i)
-			{
-				var curExpression = new simpleValue(undefined);
-				if(i < array_length(expArgs))
+				for(var i = 0;i < array_length(paramNames); ++i)
 				{
-					curExpression = expArgs[i];
+					var curExpression = new simpleValue(undefined);
+					if(i < array_length(expArgs))
+					{
+						curExpression = expArgs[i];
+					}
+					currentScope.setLocalVariable(paramNames[i],curExpression);
 				}
-				currentScope.setLocalVariable(paramNames[i],curExpression);
+				if(isVarArgs)
+				{
+					var varArgs = []
+					for(var i = array_length(paramNames); i < array_length(expArgs); ++i)
+					{
+						array_push(varArgs,new Reference(expArgs[i]));
+					}
+					currentScope.getVariable("...").setValue(new ExpressionList(varArgs,true));
+				}
 			}
-			if(isVarArgs)
+			else
 			{
-				var varArgs = []
-				for(var i = array_length(paramNames); i < array_length(expArgs); ++i)
-				{
-					array_push(varArgs,new Reference(expArgs[i]));
-				}
-				currentScope.getVariable("...").setValue(new ExpressionList(varArgs,true));
+				currentScope = trace.scope;
+				prevScope = trace.prevScope;
+				block = trace.block
 			}
 			try
 			{
-				helpVisitBlock(block);
+				helpVisitBlock(block,threadTrace);
 				return new Reference(new simpleValue(undefined));
 			}
 			catch(e)
 			{
 				if(is_instanceof(e,Scope))
+				{
+					throw(e);
+				}
+				if(!variable_struct_exists(e,"type"))
 				{
 					throw(e);
 				}
@@ -709,10 +1019,14 @@ with(global.interpreter)
 				{
 					return (e.value);
 				}
-				if(e.lineNumber == -1)
+				if(e.type == ExceptionType.YIELD)
 				{
-					e.lineNumber = funcBody.val.firstLine;
+					var trace = new Thread_Trace(Expression.FUNCTIONCALL,currentScope);
+					trace.prevScope = prevScope;
+					trace.block = block
+					array_push(e.threadTraces,trace)
 				}
+				//array_push(e.lineNumbers, visitor.firstLine);
 				throw(e);
 			}
 			finally
@@ -724,9 +1038,15 @@ with(global.interpreter)
 		{
 			var GMLfunc = funcBodyExp.val;
 			
+			//Expects an expression, not a reference
 			if(!funcBodyExp.isGMLtoGML)
 			{
-				return new Reference(callFunction(GMLfunc,expArgs));
+				var retVal =  (callFunction(GMLfunc,expArgs));
+				if(typeof(retVal) == "array")
+				{
+					return retVal;
+				}
+				return (retVal)
 			}
 			var GMLParameters = [];
 			for(var i = 0; i < array_length(expArgs); ++i)
@@ -746,10 +1066,6 @@ with(global.interpreter)
 			{
 				return new Reference(GMLToLua(retVal));
 			}
-		}
-		else if(funcBodyExp.type == LuaTypes.THREAD)
-		{
-			throw("Threads not currently supported");
 		}
 		else if(funcBodyExp.type == LuaTypes.TABLE)
 		{
@@ -830,7 +1146,7 @@ with(global.interpreter)
 	visitUniop = function(visitor)
 	{
 		var firstValue = visitExpression(visitor.first);
-		var firstValueExp = firstValue.getValue();
+		var firstValueExp = (helpPruneExpList(firstValue)).getValue();
 		var curOperator = visitor.operator;
 		var newExp = helpVisitOp(curOperator,firstValueExp);
 		return new Reference(newExp);

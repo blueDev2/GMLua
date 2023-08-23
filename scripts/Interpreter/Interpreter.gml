@@ -1038,33 +1038,40 @@ with(global.interpreter)
 		{
 			var GMLfunc = funcBodyExp.val;
 			
-			//Expects an expression, not a reference
-			if(!funcBodyExp.isGMLtoGML)
+			try
 			{
-				var retVal =  (callFunction(GMLfunc,expArgs));
+				//Expects an expression, not a reference
+				if(!funcBodyExp.isGMLtoGML)
+				{
+					var retVal =  (callFunction(GMLfunc,expArgs));
+					if(typeof(retVal) == "array")
+					{
+						return retVal;
+					}
+					return (retVal)
+				}
+				var GMLParameters = [];
+				for(var i = 0; i < array_length(expArgs); ++i)
+				{
+					array_push(GMLParameters,LuaToGML(expArgs[i]));
+				}
+				var retVal = callFunction(GMLfunc,GMLParameters);
 				if(typeof(retVal) == "array")
 				{
+					for(var i = 0; i < array_length(retVal);++i)
+					{
+						retVal[i] = new Reference(GMLToLua(retVal[i]));
+					}
 					return retVal;
 				}
-				return (retVal)
-			}
-			var GMLParameters = [];
-			for(var i = 0; i < array_length(expArgs); ++i)
-			{
-				array_push(GMLParameters,LuaToGML(expArgs[i]));
-			}
-			var retVal = callFunction(GMLfunc,GMLParameters);
-			if(typeof(retVal) == "array")
-			{
-				for(var i = 0; i < array_length(retVal);++i)
+				else
 				{
-					retVal[i] = new Reference(GMLToLua(retVal[i]));
+					return new Reference(GMLToLua(retVal));
 				}
-				return retVal;
 			}
-			else
+			catch(e)
 			{
-				return new Reference(GMLToLua(retVal));
+				InterpreterException(string(e))
 			}
 		}
 		else if(funcBodyExp.type == LuaTypes.TABLE)

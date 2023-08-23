@@ -1,4 +1,4 @@
-
+/*
 var testFileLocations = [];
 array_push(testFileLocations,"test/test_metamethods/test.lua");
 array_push(testFileLocations,"test/test_operators/test.lua");
@@ -21,6 +21,6 @@ for(var i = 0; i < array_length(testFileLocations); ++i)
 
 
 //show_debug_message(scope)
-game_end();
-
+//game_end();
+*/
 

@@ -3,5 +3,3 @@
 
 //Run the lua function "onStep"
 onStep()
-
-

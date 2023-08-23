@@ -170,7 +170,7 @@ function luaFunction(ASTFunc,scope) : valueParent() constructor
 				}
 				return LuaToGML(retValue.getValue())
 			}
-			if(e.lineNumber == -1)
+			if(variable_struct_exists(e,"lineNumber") && e.lineNumber == -1)
 			{
 				e.lineNumber = funcBodyAST.firstLine;
 			}

@@ -38,6 +38,10 @@ with(global.LuaLibrary)
 				return res;
 			}
 			static builtInFuncs = findBuiltInFuncs()
+			if(functionName == "ds_map_create")
+			{
+				show_debug_message("sad")
+			}
 			var curFuncIndex = builtInFuncs[$functionName];
 			if(is_undefined(curFuncIndex))
 			{
@@ -230,8 +234,7 @@ with(global.LuaLibrary)
 			}
 			else
 			{
-				libraryTable.setValue( new simpleValue(curName)
-				,(new GMFunction(GMLtoGMLfunctions[$curName],true)))
+				setGMLFunctionTableValue(libraryTable,curName,GMLtoGMLfunctions[$curName],true)
 			}
 		}
 	
@@ -245,8 +248,7 @@ with(global.LuaLibrary)
 			}
 			else
 			{
-				libraryTable.setValue( new simpleValue(curName)
-				,(new GMFunction(LuaToLuaFunctions[$curName],false)))
+				setGMLFunctionTableValue(libraryTable,curName,LuaToLuaFunctions[$curName],false)
 			}
 		}
 		

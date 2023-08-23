@@ -111,6 +111,15 @@ function setGMLFunction(scope,name, func, isGMLtoGML = true)
 	scope.setLocalVariable(name, new GMFunction(func,isGMLtoGML))
 }
 
+function setGMLValueTableValue(table,keyName,newExp)
+{
+	table.setValue(new simpleValue(keyName),GMLToLua(newExp))
+}
+function setGMLFunctionTableValue(table,keyName,func, isGMLtoGML = true)
+{
+	table.setValue(new simpleValue(keyName),new GMFunction(func,isGMLtoGML))
+}
+
 function getLuaVariable(scope,name)
 {
 	return LuaToGML(scope.getVariable(name).getValue());

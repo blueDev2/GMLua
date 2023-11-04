@@ -27,7 +27,7 @@ local a = 3
 
 The selected statement must use Scope to find the value of a, which was declared via the previous statement
 
-NOTICE: Only global scopes will be used when using the interface.
+NOTICE: Only global scopes can be manipulated with the interface. 
 
 # Interface
 
@@ -50,13 +50,13 @@ Expressions are changed to GML or Lua values as needed, automatically
 
 ### function setGMLVariable(scope,name, newExp)
 
-Within the global scope(scope), create a variable with identfier: name, and value: newExp
+Within the global scope, "scope", create a variable with identfier: name, and value: newExp
 
 newExp can be any GML value that can be converted to a Lua value except for GML functions
 
 ### function setGMLFunction(scope,name, func, isGMLtoGML = true)
 
-Within the global scope(scope), create a variable with identfier: name, and value: func
+Within the global scope, "scope", create a variable with identfier: name, and value: func
 
 Lua GMFunctions have 2 different types, GMLtoGML and LuatoLua.
 

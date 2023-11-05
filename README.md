@@ -71,6 +71,10 @@ LuatoLua functions provide the Lua values directly and expect a return Lua value
 ### function getgmlfunction(functionName)
 Takes a string which is the name of a GML built in function and returns a GMFunction of said GML built in function
 
+NOTICE: Certain GML built in functions state they will return a boolean, but actually returns an interger. This causes issues as Lua considers anything other than "Nil" and "False" to be Truthy. The manual [here](https://manual.yoyogames.com/GameMaker_Language/GML_Overview/Data_Types.htm#) indicated that a real less than or equal to 0.5 is false and any greater than 0.5 is true. 
+
+You can use the GML built in function "bool" to cast the value into an actual boolean value to sidestep this issue. 
+
 ### function callwithcontext(context,func,[args...])
 Certain built in functions, such as the ones used in collisions, must have context of an instance to work properly. Take context, a function, using the remaining expressions as arguments, return the func's return.
 

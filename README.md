@@ -4,7 +4,7 @@ A Lua interpreter using GML
 
 # Important Objects
 
-## Lua Object (Internally a struct)
+## Lua Instructions (Internally a struct)
 Holds the instructions that are ran
 
 Example: 
@@ -31,15 +31,15 @@ NOTICE: Only global scopes can be manipulated with the interface.
 
 # Interface
 
-## Lua Object Creation Functions
+## Lua Instruction Creation Functions
 
-Makes the Lua Object from a string, directly or from a Lua file.
+Makes a Lua Instructions Object from a string, directly or from a Lua file.
 
 ### function createLuaFromFile(filePath, logmode=false)
 
 ### function createLuaFromString(str,logmode=false)
 
-## Lua Object Running Function
+## Lua Instruction Running Function
 
 ### function runLua(luaObj, scope = new Scope(), logFolderPath)
 Runs the functions using the provided scope, if a scope is not provided, a default empty scope is made.
@@ -60,7 +60,7 @@ Within the global scope, "scope", create a variable with identfier: name, and va
 
 Lua GMFunctions have 2 different types, GMLtoGML and LuatoLua.
 
-Most GMFunctions are GMLtoGML, the Lua values are converted into GML values and then sent to the associated GML function
+Most GMFunctions are GMLtoGML; the Lua values are converted into GML values and then sent to the associated GML function
 
 LuatoLua functions provide the Lua values directly and expect a return Lua value.
 

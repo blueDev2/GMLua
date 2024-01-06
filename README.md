@@ -4,7 +4,7 @@ A Lua interpreter using GML
 
 # Important Objects
 
-## Lua Object (Internally a struct)
+## Lua Instructions (Internally a struct)
 Holds the instructions that are ran
 
 Example: 
@@ -27,19 +27,19 @@ local a = 3
 
 The selected statement must use Scope to find the value of a, which was declared via the previous statement
 
-NOTICE: Only global scopes will be used when using the interface.
+NOTICE: Only global scopes can be manipulated with the interface. 
 
 # Interface
 
-## Lua Object Creation Functions
+## Lua Instruction Creation Functions
 
-Makes the Lua Object from a string, directly or from a Lua file.
+Makes a Lua Instructions Object from a string, directly or from a Lua file.
 
 ### function createLuaFromFile(filePath, logmode=false)
 
 ### function createLuaFromString(str,logmode=false)
 
-## Lua Object Running Function
+## Lua Instruction Running Function
 
 ### function runLua(luaObj, scope = new Scope(), logFolderPath)
 Runs the functions using the provided scope, if a scope is not provided, a default empty scope is made.
@@ -50,17 +50,17 @@ Expressions are changed to GML or Lua values as needed, automatically
 
 ### function setGMLVariable(scope,name, newExp)
 
-Within the global scope(scope), create a variable with identfier: name, and value: newExp
+Within the global scope, "scope", create a variable with identfier: name, and value: newExp
 
 newExp can be any GML value that can be converted to a Lua value except for GML functions
 
 ### function setGMLFunction(scope,name, func, isGMLtoGML = true)
 
-Within the global scope(scope), create a variable with identfier: name, and value: func
+Within the global scope, "scope", create a variable with identfier: name, and value: func
 
 Lua GMFunctions have 2 different types, GMLtoGML and LuatoLua.
 
-Most GMFunctions are GMLtoGML, the Lua values are converted into GML values and then sent to the associated GML function
+Most GMFunctions are GMLtoGML; the Lua values are converted into GML values and then sent to the associated GML function
 
 LuatoLua functions provide the Lua values directly and expect a return Lua value.
 
@@ -70,6 +70,10 @@ LuatoLua functions provide the Lua values directly and expect a return Lua value
 
 ### function getgmlfunction(functionName)
 Takes a string which is the name of a GML built in function and returns a GMFunction of said GML built in function
+
+NOTICE: Certain GML built in functions state they will return a boolean, but actually returns an interger. This causes issues as Lua considers anything other than "Nil" and "False" to be Truthy. The manual [here](https://manual.yoyogames.com/GameMaker_Language/GML_Overview/Data_Types.htm#) indicated that a real less than or equal to 0.5 is false and any greater than 0.5 is true. 
+
+You can use the GML built in function "bool" to cast the value into an actual boolean value to sidestep this issue. 
 
 ### function callwithcontext(context,func,[args...])
 Certain built in functions, such as the ones used in collisions, must have context of an instance to work properly. Take context, a function, using the remaining expressions as arguments, return the func's return.

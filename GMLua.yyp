@@ -31,10 +31,10 @@
   "isEcma": false,
   "LibraryEmitters": [],
   "MetaData": {
-    "IDEVersion": "2023.6.0.92",
+    "IDEVersion": "2023.11.0.121",
   },
   "resources": [
-    {"id":{"name":"Lua_test_object","path":"objects/Lua_test_object/Lua_test_object.yy",},},
+    {"id":{"name":"Lua_Action_Object","path":"objects/Lua_Action_Object/Lua_Action_Object.yy",},},
     {"id":{"name":"AST","path":"scripts/AST/AST.yy",},},
     {"id":{"name":"GMLua_Library","path":"scripts/GMLua_Library/GMLua_Library.yy",},},
     {"id":{"name":"Enviorment","path":"scripts/Enviorment/Enviorment.yy",},},
@@ -44,7 +44,7 @@
     {"id":{"name":"Token","path":"scripts/Token/Token.yy",},},
     {"id":{"name":"Parser","path":"scripts/Parser/Parser.yy",},},
     {"id":{"name":"Lexer","path":"scripts/Lexer/Lexer.yy",},},
-    {"id":{"name":"Sprite1","path":"sprites/Sprite1/Sprite1.yy",},},
+    {"id":{"name":"Default_Sprite","path":"sprites/Default_Sprite/Default_Sprite.yy",},},
     {"id":{"name":"Analyzer","path":"scripts/Analyzer/Analyzer.yy",},},
     {"id":{"name":"Thread_Trace","path":"scripts/Thread_Trace/Thread_Trace.yy",},},
     {"id":{"name":"GMLua_Utility","path":"scripts/GMLua_Utility/GMLua_Utility.yy",},},
@@ -54,6 +54,7 @@
   "RoomOrderNodes": [
     {"roomId":{"name":"Room1","path":"rooms/Room1/Room1.yy",},},
   ],
+  "templateType": null,
   "TextureGroups": [
     {"resourceType":"GMTextureGroup","resourceVersion":"1.3","name":"Default","autocrop":true,"border":2,"compressFormat":"bz2","directory":"","groupParent":null,"isScaled":true,"loadType":"default","mipsToGenerate":0,"targets":-1,},
   ],

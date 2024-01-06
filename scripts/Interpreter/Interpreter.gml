@@ -38,7 +38,7 @@ with(global.interpreter)
 		return scope;
 	}
 
-	function helpVisitBlock(block,threadTrace = undefined)
+	helpVisitBlock = function(block,threadTrace = undefined)
 	{
 		var i = 0;
 		if(!is_undefined(threadTrace)&& array_length(threadTrace) != 0)
@@ -1038,7 +1038,7 @@ with(global.interpreter)
 		{
 			var GMLfunc = funcBodyExp.val;
 			
-			try
+			
 			{
 				//Expects an expression, not a reference
 				if(!funcBodyExp.isGMLtoGML)
@@ -1068,10 +1068,6 @@ with(global.interpreter)
 				{
 					return new Reference(GMLToLua(retVal));
 				}
-			}
-			catch(e)
-			{
-				InterpreterException(string(e))
 			}
 		}
 		else if(funcBodyExp.type == LuaTypes.TABLE)
@@ -1162,7 +1158,7 @@ with(global.interpreter)
 	//Any expression with an operator will call this
 	//Must return an expression
 	//May call a metamethod (which also must return an expression)
-	function helpVisitOp(op, exp1, exp2 = noone)
+	helpVisitOp = function(op, exp1, exp2 = noone)
 	{
 		//For certain relational operatorions 
 		var negateFinal = false;
@@ -1788,7 +1784,7 @@ with(global.interpreter)
 	}
 	
 	//This must return an expression
-	function callMetamethod(op, exp1, exp2 = noone, exp3 = noone)
+	callMetamethod = function(op, exp1, exp2 = noone, exp3 = noone)
 	{
 		static opToMetaIndexFactory = function()
 		{

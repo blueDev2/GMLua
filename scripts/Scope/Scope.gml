@@ -11,9 +11,7 @@ function Scope(parent = noone,variables = {}) constructor
 	self.variables = variables;
 	
 	//ONLY FOR DECLARATION USE
-	//Use getVariable instead as it implicitly deals with setting
-	//global variables.
-	function setLocalVariable(name,expression = new simpleValue(undefined),attribute = noone)
+	setLocalVariable = function(name,expression = new simpleValue(undefined),attribute = noone)
 	{
 		if(!variable_struct_exists(variables,name))
 		{
@@ -24,8 +22,8 @@ function Scope(parent = noone,variables = {}) constructor
 	
 	//Provides a variable struct reference
 	//If the variable does not currently exist,
-	//Create one with Nil value in the global scope
-	function getVariable(name)
+	//returns NIL
+	getVariable = function(name)
 	{
 		//If the variable is in the current scope, return it
 		if(variable_struct_exists(variables,name))
@@ -50,10 +48,11 @@ function Scope(parent = noone,variables = {}) constructor
 	}
 
 	
-	function copyLocalScope()
+	copyLocalScope = function()
 	{
 		return new Scope(,helpGetAllLocalVariables());
 	}
+	
 	helpGetAllLocalVariables = function(rs = {})
 	{
 		var names = variable_struct_get_names(variables);

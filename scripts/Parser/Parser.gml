@@ -34,8 +34,17 @@ with(global.parser)
 		var statements = [];
 		var gotoIndices = {};
 		//scopeDepth++;
+		var lastWasReturn = false
 		while(!peek(["end","until","elseif","else"]) && tokens.has(0))
 		{
+			if(lastWasReturn)
+			{
+				var improperReturnAST = array_last(statements)
+				
+				ParserException("Return statement is not the last statement within it's block"
+				,improperReturnAST.firstLine)
+			}
+			
 			var newAST = undefined;
 			while(match(";"))
 			{}
@@ -107,6 +116,7 @@ with(global.parser)
 			else if(peek("return"))
 			{
 				newAST = parseReturnStatement();
+				lastWasReturn = true
 			}
 			if(is_undefined(newAST))
 			{

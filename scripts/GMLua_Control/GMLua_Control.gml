@@ -2,9 +2,6 @@ global.GMLua = {}
 with(global.GMLua)
 {
 	self.logmode = true
-	/*self.lexer = undefined;
-	self.parser = undefined;
-	self.interpreter = undefined;*/
 	function lexAndParse(code,logmode = self.logmode,folderPath="",fileName="Misc")
 	{
 		var lexedTokens = global.lexer.lex(code);

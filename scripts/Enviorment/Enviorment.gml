@@ -405,6 +405,11 @@ function Thread(luaFunc) :  valueParent() constructor
 	{
 		val = newVal;
 	}
+	
+	toString = function()
+	{
+		return "{ type: "+string(type)+", UID: " + string(UID) +"}"
+	}
 }
 
 function ExpressionList(arrOfLuaitems,areRefs = false) :  valueParent() constructor
@@ -452,7 +457,7 @@ function Table(newVal = {}, newAnalogousObject = {}) constructor
 	getValue = function(key)
 	{
 		key = LuaToHash(key);
-		if(key == "undefined")
+		if(key == "Nil")
 		{
 			InterpreterException("Attempted to index a table with nil")
 		}
@@ -551,7 +556,7 @@ function Table(newVal = {}, newAnalogousObject = {}) constructor
 	{
 		key = LuaToHash(key);
 		var refToValue = (new Reference(analogousObject,key,false));
-		if(key == "undefined")
+		if(key == "Nil")
 		{
 			InterpreterException("Attempted to index a table with nil")
 		}
@@ -765,6 +770,16 @@ function GMLToLua(gmlItem)
 	else if(type == "struct" || type == "ref")
 	{
 		var newTable = new Table({},gmlItem);
+		return newTable;
+	}
+	else if(type == "array")
+	{
+		var structItem = {};
+		for(var i = 0; i < array_length(gmlItem); ++i)
+		{
+			structItem[$string(i+1)] = gmlItem[i];
+		}
+		var newTable = new Table({},structItem);
 		return newTable;
 	}
 	InterpreterException("Failed to change a GML value to lua");

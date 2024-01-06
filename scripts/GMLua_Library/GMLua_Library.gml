@@ -38,16 +38,24 @@ with(global.LuaLibrary)
 				return res;
 			}
 			static builtInFuncs = findBuiltInFuncs()
-			if(functionName == "ds_map_create")
-			{
-				show_debug_message("sad")
-			}
 			var curFuncIndex = builtInFuncs[$functionName];
 			if(is_undefined(curFuncIndex))
 			{
 				return undefined;
 			}
 			return method(undefined,curFuncIndex)
+		}
+		
+		GMLtoGMLfunctions.ExplistToTable = function()
+		{
+			var arr = argument[15];
+			
+			var retStruct = {}
+			for(var i = 0; i < array_length(arr); ++i)
+			{
+				retStruct[$string(i+1)] = arr[i];
+			}
+			return retStruct;
 		}
 		
 		GMLtoGMLfunctions.print = function()

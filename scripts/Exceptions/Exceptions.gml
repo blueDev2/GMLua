@@ -86,13 +86,15 @@ function HandleGMLuaExceptions(error, fullFilePath)
 	{
 		throw(error);
 	}
-	var logFolderPath = (filename_path(fullFilePath)+"InterpreterCrashLog_");
-	var beforeDotStr = string_split(filename_name(fullFilePath),".")[0];
-	var logFolderPath = logFolderPath + beforeDotStr + ".txt";
-	var f = file_text_open_write(logFolderPath);
-	file_text_write_string(f,string(error.scopeAtThrow));
-	file_text_close(f);
-	
+	if(global.GMLua.logmode)
+	{
+		var logFolderPath = (filename_path(fullFilePath)+"InterpreterCrashLog_");
+		var beforeDotStr = string_split(filename_name(fullFilePath),".")[0];
+		var logFolderPath = logFolderPath + beforeDotStr + ".txt";
+		var f = file_text_open_write(logFolderPath);
+		file_text_write_string(f,string(error.scopeAtThrow));
+		file_text_close(f);
+	}
 	var lineNumber = string(error.lineNumbers);
 	var thrownString = "";
 

@@ -26,7 +26,7 @@
     {"name":"Token","order":9,"path":"scripts/Token/Token.yy",},
     {"name":"Parser","order":7,"path":"scripts/Parser/Parser.yy",},
     {"name":"Lexer","order":6,"path":"scripts/Lexer/Lexer.yy",},
-    {"name":"Sprite1","order":1,"path":"sprites/Sprite1/Sprite1.yy",},
+    {"name":"Default_Sprite","order":1,"path":"sprites/Default_Sprite/Default_Sprite.yy",},
     {"name":"Thread_Trace","order":13,"path":"scripts/Thread_Trace/Thread_Trace.yy",},
     {"name":"GMLua_Utility","order":11,"path":"scripts/GMLua_Utility/GMLua_Utility.yy",},
     {"name":"Interpreter","order":5,"path":"scripts/Interpreter/Interpreter.yy",},

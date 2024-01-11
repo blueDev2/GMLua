@@ -122,3 +122,11 @@ function getLuaVariable(scope,name)
 	return LuaToGML(scope.getVariable(name).getValue());
 }
 
+// By default, the function list is an empty whitelist
+function setFunctionNameList(functionNameList, isWhiteList = true)
+{
+	global.LuaLibrary.gmlFunctionNameList = functionNameList;
+	global.LuaLibrary.nameListIsWhitelist = isWhiteList
+}
+
+//setFunctionNameList([],false)

@@ -3,6 +3,9 @@
 global.LuaLibrary = {}
 with(global.LuaLibrary)
 {
+	gmlFunctionNameList = [];
+	nameListIsWhitelist = true;
+	
 	basicFunctionLibrary = {};
 	with(basicFunctionLibrary)
 	{
@@ -11,6 +14,20 @@ with(global.LuaLibrary)
 		//add built-in functions as needed in builtInFuncs
 		GMLtoGMLfunctions.getgmlfunction = function(functionName)
 		{
+			var inNameList = false;
+			if(array_get_index(global.LuaLibrary.gmlFunctionNameList,functionName) != -1)
+			{
+				inNameList = true;
+			}
+			if(inNameList && !global.LuaLibrary.nameListIsWhitelist)
+			{
+				InterpreterException("Attempted to use a gml built-in function that is on the blacklist")
+			}
+			if(!inNameList && global.LuaLibrary.nameListIsWhitelist)
+			{
+				InterpreterException("Attempted to use a gml built-in function that is not on the whitelist")
+			}
+				
 			static findBuiltInFuncs = function()
 			{
 				var res = {};

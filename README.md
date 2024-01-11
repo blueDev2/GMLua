@@ -64,6 +64,15 @@ Most GMFunctions are GMLtoGML; the Lua values are converted into GML values and 
 
 LuatoLua functions provide the Lua values directly and expect a return Lua value.
 
+### function setFunctionNameList(functionNameList, isWhiteList = true)
+This applies a white or black list to the "getgmlfunction" function within GMLua. 
+
+Functions not on the whitelist or conversely on the blacklist will result in an exception.
+
+There is only 1 list and the boolean provided afterwards decides whether it is a white or black list.
+
+By default, a whitelist with no function names is provided.
+
 ### function getLuaVariable(scope,name)
 
 # GMLua specific functions
@@ -77,6 +86,7 @@ You can use the GML built in function "bool" to cast the value into an actual bo
 
 ### function callwithcontext(context,func,[args...])
 Certain built in functions, such as the ones used in collisions, must have context of an instance to work properly. Take context, a function, using the remaining expressions as arguments, return the func's return.
+
 
 # Data Types and Conversions
 
@@ -132,4 +142,6 @@ Function -> Method
 
 A test.zip file is provided in this project. If you would like to see a demo of this in action, place the test.zip file in the appropriate location depending on device and unzip it. Refer to [this](https://manual.yoyogames.com/Additional_Information/The_File_System.htm) part of the manual.
 
-Run the project and you should see 2 red circles with grey centers that follow the mouse at differing speeds. Please then check on the "Lua_test_object" to see an example on how to make the GML and Lua interact seamlessly.
+Uncomment and save the last line in GMLua_Control. This allows "getgmlfunction" to use any built-in function.
+
+Run the project and you should see 2 red circles with grey centers that follow the mouse at differing speeds. Please then check on the "Lua_test_object" to see an example on how to make the GML and Lua interact seamlessly. The lua code that is used is within the folder "test_object"

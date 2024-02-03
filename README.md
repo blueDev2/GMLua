@@ -61,8 +61,10 @@ Within the global scope, "scope", create a variable with identfier: name, and va
 Lua GMFunctions have 2 different types, GMLtoGML and LuatoLua.
 
 Most GMFunctions are GMLtoGML; the Lua values are converted into GML values and then sent to the associated GML function
+(If you wish to return multiple values, return an array of GML values)
 
 LuatoLua functions provide the Lua values directly and expect a return Lua value.
+(If you wish to return multiple values, return an array of Lua values)
 
 ### function getLuaVariable(scope,name)
 

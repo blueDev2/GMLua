@@ -410,6 +410,39 @@ with(global.LuaLibrary)
 					}
 					return str;
 				}
+				len = function(s)
+				{
+					return string_length(s)
+				}
+				lower = function(s)
+				{
+					return string_lower(s)	
+				}
+				rep = function(s,n,sep ="")
+				{
+					var res = ""
+					for(var i = 0; i < n; ++i)
+					{
+						res += n
+						if(i == n-1)
+						{
+							res += sep	
+						}
+					}
+				}
+				reverse = function(s)
+				{
+					var res = ""
+					for(var i = string_length(s); i <= 1; --i)
+					{
+						res += string_char_at(s,i)	
+					}
+					return rs
+				}
+				upper = function(s)
+				{
+					return string_upper(s)	
+				}
 			}
 			
 		}

@@ -64,16 +64,9 @@ Most GMFunctions are GMLtoGML; the Lua values are converted into GML values and 
 
 LuatoLua functions provide the Lua values directly and expect a return Lua value.
 
-### function setFunctionNameList(functionNameList, isWhiteList = true)
-This applies a white or black list to the "getgmlfunction" function within GMLua. 
-
-Functions not on the whitelist or conversely on the blacklist will result in an exception.
-
-There is only 1 list and the boolean provided afterwards decides whether it is a white or black list.
-
-By default, a whitelist with no function names is provided, however, a line of code at the end of GMLua_Control turns it into a blacklist
-
 ### function getLuaVariable(scope,name)
+
+Gets the variable within the scope that has the given name and returns it as a GML value
 
 # GMLua specific functions
 
@@ -83,6 +76,15 @@ Takes a string which is the name of a GML built in function and returns a GMFunc
 NOTICE: Certain GML built in functions state they will return a boolean, but actually returns an interger. This causes issues as Lua considers anything other than "Nil" and "False" to be Truthy. The manual [here](https://manual.yoyogames.com/GameMaker_Language/GML_Overview/Data_Types.htm#) indicated that a real less than or equal to 0.5 is false and any greater than 0.5 is true. 
 
 You can use the GML built in function "bool" to cast the value into an actual boolean value to sidestep this issue. 
+
+### function setFunctionNameList(functionNameList, isWhiteList = true)
+This applies a white or black list to the "getgmlfunction" function within GMLua. 
+
+Functions not on the whitelist or conversely on the blacklist will result in an exception.
+
+There is only 1 list and the boolean provided afterwards decides whether it is a white or black list.
+
+By default, a whitelist with no function names is provided, however, a line of code at the end of GMLua_Control turns it into a blacklist
 
 ### function callwithcontext(context,func,[args...])
 Certain built in functions, such as the ones used in collisions, must have context of an instance to work properly. Take context, a function, using the remaining expressions as arguments, return the func's return.

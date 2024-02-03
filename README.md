@@ -71,7 +71,7 @@ Functions not on the whitelist or conversely on the blacklist will result in an 
 
 There is only 1 list and the boolean provided afterwards decides whether it is a white or black list.
 
-By default, a whitelist with no function names is provided.
+By default, a whitelist with no function names is provided, however, a line of code at the end of GMLua_Control turns it into a blacklist
 
 ### function getLuaVariable(scope,name)
 
@@ -141,7 +141,5 @@ Function -> Method
 # Demo
 
 A test.zip file is provided in this project. If you would like to see a demo of this in action, place the test.zip file in the appropriate location depending on device and unzip it. Refer to [this](https://manual.yoyogames.com/Additional_Information/The_File_System.htm) part of the manual.
-
-Uncomment and save the last line in GMLua_Control. This allows "getgmlfunction" to use any built-in function.
 
 Run the project and you should see 2 red circles with grey centers that follow the mouse at differing speeds. Please then check on the "Lua_test_object" to see an example on how to make the GML and Lua interact seamlessly. The lua code that is used is within the folder "test_object"

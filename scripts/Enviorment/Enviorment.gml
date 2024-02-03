@@ -546,11 +546,6 @@ function Table(newVal = {}, newAnalogousObject = {}) constructor
 		}
 		InterpreterException("Error found, expression type within table is unexpected")
 	}
-	getValueFromVal = function(GMLkey)
-	{
-		GMLkey = LuaToHash(new simpleValue(GMLkey))
-		return val[$GMLkey];
-	}
 	
 	setValue = function(key,newVal)
 	{
@@ -808,7 +803,8 @@ function Variable(value = new simpleValue(undefined),attribute = noone): valuePa
 	self.value = value;
 	function getValue()
 	{
-		var curType = value.type;
+		var curType = value.type
+		
 		if(curType == LuaTypes.BOOLEAN ||
 		curType == LuaTypes.FLOAT ||
 		curType == LuaTypes.INTEGER ||

@@ -7,22 +7,31 @@ with(global.interpreter)
 	globalScope = new Scope(noone);
 	//Variables that are currently available
 	currentScope = new Scope(globalScope);
-	
-	//traceback = [];
 
-	function visitChunk(chunk, scope = new Scope(noone), addBasicLibrary = true)
+	
+
+	function visitChunk(chunk, scope = new Scope(noone))
 	{
+		// Interpreter is global, so changes to global scope cannot be done until the interpreter
+		// is fully done with it.
+		static interpreterBusy = false
+		if(interpreterBusy)
+		{
+			InterpreterException("Attempted to execute a chunk while already executing a chunk")
+		}
+		interpreterBusy = true
 		scope.associatedFilePath = chunk.sourceFilePath+chunk.sourceFileName
 		globalScope = scope;
+		
 		setGMLVariable(scope,"self",-1,true);
 		setGMLVariable(scope,"other",-2,true);
 		setGMLVariable(scope,"all",-3,true);
 		setGMLVariable(scope,"noone",-4,true);
-		if(addBasicLibrary)
-		{
-			global.LuaLibrary.addLibraryFunctions(globalScope)
-			global.LuaLibrary.addLibraryFunctions(globalScope,"coroutine");
-		}
+		
+
+		
+		addBasicLibraries(scope)
+		
 		currentScope = new Scope(scope);
 		try
 		{
@@ -31,6 +40,10 @@ with(global.interpreter)
 		catch(e)
 		{
 			HandleGMLuaExceptions(e,scope.associatedFilePath);
+		}
+		finally
+		{
+			interpreterBusy = false;
 		}
 		scope  = currentScope.parent;
 		globalScope = noone;
@@ -94,15 +107,15 @@ with(global.interpreter)
 		}
 	}
 	
-	visit = function(visitor)
+	visit = function(visitor,threadTrace = undefined)
 	{
 		if(visitor.astType == AST.STATEMENT)
 		{
-			visitStatement(visitor);
+			visitStatement(visitor,threadTrace);
 		}
 		else if(visitor.astType == AST.EXPRESSION)
 		{
-			return visitExpression(visitor);
+			return visitExpression(visitor,threadTrace);
 		}
 	}
 
@@ -808,11 +821,21 @@ with(global.interpreter)
 	{
 		if(visitor.expression == noone)
 		{
+
 			var retExp = currentScope.getVariable(visitor.name);
-			if(retExp.getValue().type == LuaTypes.EXPLIST)
+			
+			try
 			{
-				retExp = retExp.getValue().getValue();
+				if(retExp.getValue().type == LuaTypes.EXPLIST)
+				{
+					retExp = retExp.getValue().getValue();
+				}
 			}
+			catch(e)
+			{
+				show_debug_message("ONCE AGAIN A FUCKUP")	
+			}
+			
 			return retExp;
 		}
 		var curName = visitExpression(visitor.name);
@@ -844,7 +867,7 @@ with(global.interpreter)
 				var rawValExpression = tableRef.getValue(key);
 				if(rawValExpression.type == LuaTypes.NIL &&
 				tableRef.metatable != noone && 
-				!is_undefined(tableRef.metatable.getValueFromVal("__index")))
+				!is_undefined(tableRef.metatable.getValue(new simpleValue("__index"))))
 				{
 					rawValExpression = interpreter.callMetamethod("[]",tableRef,key);
 				}
@@ -854,7 +877,7 @@ with(global.interpreter)
 			{
 				var rawValExpression = tableRef.getValue(key);
 				if(tableRef.metatable != noone && 
-				!is_undefined(tableRef.metatable.getValueFromVal("__newindex")) && 
+				!is_undefined(tableRef.metatable.getValue(new simpleValue("__newindex"))) && 
 				rawValExpression.type == LuaTypes.NIL)
 				{
 					rawValExpression = interpreter.callMetamethod("=[]",tableRef,key,newVal);
@@ -1038,17 +1061,23 @@ with(global.interpreter)
 		{
 			var GMLfunc = funcBodyExp.val;
 			
-			
 			{
-				//Expects an expression, not a reference
+				//Expects either an array of Luaitems or a Luaitem, no references
 				if(!funcBodyExp.isGMLtoGML)
 				{
 					var retVal =  (callFunction(GMLfunc,expArgs));
 					if(typeof(retVal) == "array")
 					{
+						for(var i = 0; i < array_length(retVal);++i)
+						{
+							retVal[i] = new Reference((retVal[i]));
+						}
 						return retVal;
 					}
-					return (retVal)
+					else
+					{
+						return new Reference(retVal);
+					}
 				}
 				var GMLParameters = [];
 				for(var i = 0; i < array_length(expArgs); ++i)
@@ -1943,22 +1972,22 @@ with(global.interpreter)
 				{
 					if(isBinary)
 					{
-						op = op[0]
+						metaIndex = metaIndex[0]
 					}
 					else
 					{
-						op = op[1]
+						metaIndex = metaIndex[1]
 					}
 				}
 				else if(op == "~")
 				{
 					if(isBinary)
 					{
-						op = op[0]
+						metaIndex = metaIndex[0]
 					}
 					else
 					{
-						op = op[1]
+						metaIndex = metaIndex[1]
 					}
 				}
 				var metaIndexExp = new simpleValue(metaIndex);
@@ -1988,7 +2017,7 @@ with(global.interpreter)
 				}
 				metaValue = tableWithMetatable.metatable.getValue(metaIndexExp);
 				if(metaValue.type != LuaTypes.FUNCTION &&
-				metaValue.type != LuaTypes.GMFUNCTION )
+				metaValue.type != LuaTypes.GMFUNCTION && metaValue.type != LuaTypes.TABLE)
 				{
 					MetamethodFailureException(op,exp1,exp2);
 				}

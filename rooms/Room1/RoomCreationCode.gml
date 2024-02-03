@@ -1,16 +1,20 @@
-/*
+
 var testFileLocations = [];
 
+array_push(testFileLocations,"test/test_misc/test.lua");
 array_push(testFileLocations,"test/test_metamethods/test.lua");
 array_push(testFileLocations,"test/test_operators/test.lua");
 array_push(testFileLocations,"test/test_goto/test.lua");
 array_push(testFileLocations,"test/test_varargs/test.lua");
 array_push(testFileLocations,"test/test_loops/test.lua");
 array_push(testFileLocations,"test/test_coroutines/test.lua");
+array_push(testFileLocations,"test/test_package/test.lua");
+array_push(testFileLocations,"test/test_string/test.lua");
+
 for(var i = 0; i < array_length(testFileLocations); ++i)
 {
 	var curFile = (testFileLocations[i]);
-	var chunk = createLuaFromFile(curFile,true);
+	var chunk = createLuaFromFile(curFile);
 	show_debug_message("Current test file: "+(testFileLocations[i]));
 	var scope = new Scope();
 	//var data = {sand:23}
@@ -22,6 +26,5 @@ for(var i = 0; i < array_length(testFileLocations); ++i)
 
 
 //show_debug_message(scope)
-game_end();
+//game_end();
 
-*/

@@ -50,7 +50,7 @@ with(global.parser)
 			{}
 			var curLine = tokens.get(0).line;
 			
-			if(peek(Token.IDENTIFIER))
+			if(peek(TokenType.IDENTIFIER))
 			{
 				var curIndex = tokens.index;
 
@@ -160,7 +160,7 @@ with(global.parser)
 			ParserException("Parser issue, check parseLabel function in Parser",-1);	
 		}
 		
-		if(!peek(Token.IDENTIFIER))
+		if(!peek(TokenType.IDENTIFIER))
 		{
 			ParserException("Label missing Identifier",tokens.get(-1).line);
 		}
@@ -189,7 +189,7 @@ with(global.parser)
 		{
 			ParserException("Parser issue, check parseGotoStatement function in Parser",-1);	
 		}
-		if(!peek(Token.IDENTIFIER))
+		if(!peek(TokenType.IDENTIFIER))
 		{
 			ParserException("Goto statement missing Identifier",tokens.get(-1).line);
 		}
@@ -287,7 +287,7 @@ with(global.parser)
 		{
 			ParserException("Parser issue, check parseForStatement function in Parser",-1);	
 		}
-		if(!match(Token.IDENTIFIER))
+		if(!match(TokenType.IDENTIFIER))
 		{
 			ParserException("For statement is missing an identifier",tokens.get(-1).line);	
 		}
@@ -313,7 +313,7 @@ with(global.parser)
 			var nameList = [];
 			var expList = [];
 			tokens.index -= 1;
-			if(!peek(Token.IDENTIFIER))
+			if(!peek(TokenType.IDENTIFIER))
 			{
 				ParserException("For statement is missing an identifier",tokens.get(-1).line);
 			}
@@ -347,7 +347,7 @@ with(global.parser)
 		{
 			ParserException("Parser issue, check parseFunctionDeclaration function in Parser",-1);	
 		}
-		if(!peek(Token.IDENTIFIER))
+		if(!peek(TokenType.IDENTIFIER))
 		{
 			ParserException("Missing identifier for function declaration",tokens.get(-1).line);	
 		}
@@ -355,7 +355,7 @@ with(global.parser)
 		tokens.advance();
 		while(match("."))
 		{
-			if(!peek(Token.IDENTIFIER))
+			if(!peek(TokenType.IDENTIFIER))
 			{
 				ParserException("Missing identifier for function declaration",tokens.get(-1).line);	
 			}
@@ -413,7 +413,7 @@ with(global.parser)
 		{
 			if(!peek(")"))
 			{
-				if(!peek(Token.IDENTIFIER))
+				if(!peek(TokenType.IDENTIFIER))
 				{
 					ParserException("Missing identifier for function body",tokens.get(-1).line);	
 				}
@@ -421,7 +421,7 @@ with(global.parser)
 				tokens.advance();
 				while(match(","))
 				{
-					if(!peek(Token.IDENTIFIER))
+					if(!peek(TokenType.IDENTIFIER))
 					{
 						ParserException("Missing identifier for function body",tokens.get(-1).line);	
 					}
@@ -452,7 +452,7 @@ with(global.parser)
 		match("local");
 		if(match("function"))
 		{		
-			if(!peek(Token.IDENTIFIER))
+			if(!peek(TokenType.IDENTIFIER))
 			{
 				ParserException("Missing identifier for local function declaration",tokens.get(-1).line);	
 			}
@@ -468,7 +468,7 @@ with(global.parser)
 			var names = [];
 			var attributes = [];
 			var expressions = [];
-			if(!peek(Token.IDENTIFIER))
+			if(!peek(TokenType.IDENTIFIER))
 			{
 				ParserException("Missing identifier for local variable declaration",tokens.get(-1).line);	
 			}
@@ -495,7 +495,7 @@ with(global.parser)
 			{
 				var curName = noone;
 				var curAttribute = noone;
-				if(!peek(Token.IDENTIFIER))
+				if(!peek(TokenType.IDENTIFIER))
 				{
 					ParserException("Missing identifier for local variable declaration",tokens.get(-1).line);	
 				}
@@ -577,7 +577,7 @@ with(global.parser)
 		if(level == 10)
 		{
 			var operator = noone;
-			if(peek(operatorPrecedence[level])&& peek(Token.OPERATOR))
+			if(peek(operatorPrecedence[level])&& peek(TokenType.OPERATOR))
 			{
 				operator= tokens.get(0).literal;
 				tokens.advance();
@@ -590,7 +590,7 @@ with(global.parser)
 			return new ASTUniop(operator,first);	
 		}
 		var first = parseExpressionTerm(level+1);
-		if(peek(operatorPrecedence[level])&& peek(Token.OPERATOR))
+		if(peek(operatorPrecedence[level])&& peek(TokenType.OPERATOR))
 		{
 			var operator = tokens.get(0).literal;
 			tokens.advance();
@@ -611,7 +611,7 @@ with(global.parser)
 			return parsePrimaryExpression();	
 		}
 
-		while(peek(operatorPrecedence[level])&& peek(Token.OPERATOR))
+		while(peek(operatorPrecedence[level])&& peek(TokenType.OPERATOR))
 		{
 			var operator = tokens.get(0).literal;
 			tokens.advance();
@@ -645,11 +645,11 @@ with(global.parser)
 		{
 			return new ASTLiteral(false);
 		}
-		else if(match(Token.INTEGER))
+		else if(match(TokenType.INTEGER))
 		{
 			return new ASTLiteral(int64(real(tokens.get(-1).literal)));
 		}
-		else if(match(Token.FLOAT))
+		else if(match(TokenType.FLOAT))
 		{
 			var strVal = tokens.get(-1).literal;
 			var isBaseTen = true;
@@ -724,7 +724,7 @@ with(global.parser)
 			}
 			return new ASTLiteral(val);
 		}
-		else if(match(Token.STRING))
+		else if(match(TokenType.STRING))
 		{
 			var val = tokens.get(-1).literal;
 			
@@ -762,7 +762,7 @@ with(global.parser)
 				}
 				return parsePrefixExpression(new ASTGroup(group));
 			}
-			else if(match(Token.IDENTIFIER))
+			else if(match(TokenType.IDENTIFIER))
 			{
 				var name = tokens.get(-1).literal;
 				return parsePrefixExpression(new ASTAccess(name));
@@ -771,7 +771,7 @@ with(global.parser)
 		}
 		else
 		{
-			if(peek(["(","{",":",Token.STRING]))
+			if(peek(["(","{",":",TokenType.STRING]))
 			{
 				return parsePrefixExpression(parseFunctionCall(prefix));
 			}
@@ -786,7 +786,7 @@ with(global.parser)
 			}
 			else if(match("."))
 			{
-				if(!match(Token.IDENTIFIER))
+				if(!match(TokenType.IDENTIFIER))
 				{
 					ParserException("Missing Identifier for prefixExpression",tokens.get(-1).line);
 				}
@@ -818,7 +818,7 @@ with(global.parser)
 			if(match(":"))
 			{
 				var name;
-				if(match(Token.IDENTIFIER))
+				if(match(TokenType.IDENTIFIER))
 				{
 					name = tokens.get(-1).literal;
 				}
@@ -843,7 +843,7 @@ with(global.parser)
 			{
 				args = [parseTableConstructor()];	
 			}
-			else if(match(Token.STRING))
+			else if(match(TokenType.STRING))
 			{
 				val = tokens.get(-1).literal;
 				args = [new ASTLiteral(val)];
@@ -907,7 +907,7 @@ with(global.parser)
 					ParserException("Missing \"]\" for field",tokens.get(-1).line);	
 				}
 			}
-			else if(peek(Token.IDENTIFIER) && peek("=",1))
+			else if(peek(TokenType.IDENTIFIER) && peek("=",1))
 			{
 				exp1 = tokens.get(0).literal;
 				tokens.advance();
@@ -945,7 +945,7 @@ with(global.parser)
 						ParserException("Missing \"]\" for field",tokens.get(-1).line);	
 					}
 				}
-				else if(peek(Token.IDENTIFIER) && peek("=",1))
+				else if(peek(TokenType.IDENTIFIER) && peek("=",1))
 				{
 					exp1 = tokens.get(0).literal;
 					tokens.advance();

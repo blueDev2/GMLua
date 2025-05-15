@@ -1,11 +1,13 @@
 {
-  "resourceType": "GMScript",
-  "resourceVersion": "1.0",
-  "name": "Lexer",
-  "isCompatibility": false,
-  "isDnD": false,
-  "parent": {
-    "name": "GMLua",
-    "path": "folders/Scripts/GMLua.yy",
+  "$GMScript":"",
+  "%Name":"Lexer",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"Lexer",
+  "parent":{
+    "name":"GMLua",
+    "path":"folders/Scripts/GMLua.yy",
   },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
 }

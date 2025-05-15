@@ -1,7 +1,7 @@
 global.GMLua = {}
 with(global.GMLua)
 {
-	self.logmode = false
+	self.logmode = true
 	self.defaultFolderPath = ""
 	function lexAndParse(code,logmode = self.logmode,folderPath=defaultFolderPath,fileName="Misc")
 	{
@@ -54,7 +54,7 @@ with(global.GMLua)
 		return abstractTree;
 	}
 	
-	runAST = function(abstractTree, scope = new Scope(), logFolderPath )
+	runAST = function(abstractTree, scope = new Scope(), logmode = self.logmode, logFolderPath = undefined)
 	{
 		if(is_undefined(logFolderPath))
 		{
@@ -103,9 +103,9 @@ function createLuaFromString(str,logmode)
 	return global.GMLua.createLuaFromString(str,logmode)
 }
 
-function runLua(luaObj, scope = new Scope(), logFolderPath)
+function runLua(luaObj, scope = new Scope(), logmode = undefined, logFolderPath = undefined )
 {
-	return global.GMLua.runAST(luaObj, scope, logFolderPath)
+	return global.GMLua.runAST(luaObj, scope, logmode, logFolderPath)
 }
 
 function setGMLVariable(scope,name, newExp, isConst = false)

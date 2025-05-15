@@ -1,5 +1,5 @@
 {
-  "FolderOrderSettings": [
+  "FolderOrderSettings":[
     {"name":"Animation Curves","order":12,"path":"folders/Animation Curves.yy",},
     {"name":"Extensions","order":14,"path":"folders/Extensions.yy",},
     {"name":"Fonts","order":7,"path":"folders/Fonts.yy",},
@@ -16,7 +16,7 @@
     {"name":"Tile Sets","order":2,"path":"folders/Tile Sets.yy",},
     {"name":"Timelines","order":8,"path":"folders/Timelines.yy",},
   ],
-  "ResourceOrderSettings": [
+  "ResourceOrderSettings":[
     {"name":"AST","order":1,"path":"scripts/AST/AST.yy",},
     {"name":"GMLua_Library","order":12,"path":"scripts/GMLua_Library/GMLua_Library.yy",},
     {"name":"Enviorment","order":2,"path":"scripts/Enviorment/Enviorment.yy",},
@@ -30,5 +30,6 @@
     {"name":"Thread_Trace","order":13,"path":"scripts/Thread_Trace/Thread_Trace.yy",},
     {"name":"GMLua_Utility","order":11,"path":"scripts/GMLua_Utility/GMLua_Utility.yy",},
     {"name":"Interpreter","order":5,"path":"scripts/Interpreter/Interpreter.yy",},
+    {"name":"LAO_Factory","order":2,"path":"objects/LAO_Factory/LAO_Factory.yy",},
   ],
 }

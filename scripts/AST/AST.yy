@@ -1,11 +1,13 @@
 {
-  "resourceType": "GMScript",
-  "resourceVersion": "1.0",
-  "name": "AST",
-  "isCompatibility": false,
-  "isDnD": false,
-  "parent": {
-    "name": "GMLua",
-    "path": "folders/Scripts/GMLua.yy",
+  "$GMScript":"",
+  "%Name":"AST",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"AST",
+  "parent":{
+    "name":"GMLua",
+    "path":"folders/Scripts/GMLua.yy",
   },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
 }

@@ -328,6 +328,7 @@ with(global.LuaLibrary)
 						}
 						
 					}
+					return simpleValue(undefined)
 				}
 			}
 		}
@@ -423,25 +424,47 @@ with(global.LuaLibrary)
 					var res = ""
 					for(var i = 0; i < n; ++i)
 					{
-						res += n
-						if(i == n-1)
+						res += s
+						if(i != n-1)
 						{
-							res += sep	
+							res += string(sep)	
 						}
 					}
+					return res
 				}
 				reverse = function(s)
 				{
 					var res = ""
-					for(var i = string_length(s); i <= 1; --i)
+					for(var i = string_length(s); i >= 1; --i)
 					{
 						res += string_char_at(s,i)	
 					}
-					return rs
+					return res
 				}
 				upper = function(s)
 				{
 					return string_upper(s)	
+				}
+				sub = function(s,i,j=-1)
+				{
+					if(i < 0)
+					{
+						i += string_length(s)	
+						if(i < 1)
+						{
+							i = 1;
+						}	
+					}
+					if(j < 0)
+					{
+							
+					}
+					var res = ""
+					for(;i <= j;++i)
+					{
+						res += string_char_at(s,i)	
+					}
+					return res
 				}
 			}
 			

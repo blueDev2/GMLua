@@ -1,11 +1,13 @@
 {
-  "resourceType": "GMScript",
-  "resourceVersion": "1.0",
-  "name": "Scope",
-  "isCompatibility": false,
-  "isDnD": false,
-  "parent": {
-    "name": "GMLua",
-    "path": "folders/Scripts/GMLua.yy",
+  "$GMScript":"",
+  "%Name":"Scope",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"Scope",
+  "parent":{
+    "name":"GMLua",
+    "path":"folders/Scripts/GMLua.yy",
   },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
 }

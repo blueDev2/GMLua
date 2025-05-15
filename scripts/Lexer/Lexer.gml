@@ -136,14 +136,14 @@ with(global.lexer)
 		{
 		}
 		
-		var token = chars.emit(Token.IDENTIFIER);
+		var token = chars.emit(TokenType.IDENTIFIER);
 		if(keywords[$ token.literal])
 		{
-			token.type = Token.KEYWORD;
+			token.type = TokenType.KEYWORD;
 		}
 		else if(token.literal == "and" || token.literal == "or" || token.literal == "not")
 		{
-			token.type = Token.OPERATOR;
+			token.type = TokenType.OPERATOR;
 		}
 		return token;
 	}
@@ -183,11 +183,11 @@ with(global.lexer)
 		var token;
 		if(hasPoint || hasExponent)
 		{
-			token = chars.emit(Token.FLOAT);
+			token = chars.emit(TokenType.FLOAT);
 		}
 		else
 		{
-			token = chars.emit(Token.INTEGER);
+			token = chars.emit(TokenType.INTEGER);
 		}
 		return token;
 	}
@@ -287,7 +287,7 @@ with(global.lexer)
 			}
 		}
 		
-		var token = chars.emit(Token.STRING);
+		var token = chars.emit(TokenType.STRING);
 		var strVal = token.literal;
 		var val;
 		var temp = string_char_at(strVal,1)
@@ -360,7 +360,7 @@ with(global.lexer)
 		{
 			ParserException("Parser cannot tell what kind of operation is",chars.line);	
 		}
-		return chars.emit(Token.OPERATOR);
+		return chars.emit(TokenType.OPERATOR);
 	}
 	
 	peek = function (patterns,offset = 0)

@@ -1,5 +1,5 @@
 {
-  "$GMScript":"",
+  "$GMScript":"v1",
   "%Name":"Token",
   "isCompatibility":false,
   "isDnD":false,

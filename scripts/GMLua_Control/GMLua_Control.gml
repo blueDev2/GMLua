@@ -1,97 +1,100 @@
 global.GMLua = {}
-with(global.GMLua)
+function startUpGMLua_Control()
 {
-	self.logmode = true
-	self.defaultFolderPath = ""
-	function lexAndParse(code,logmode = self.logmode,folderPath=defaultFolderPath,fileName="Misc")
+	with(global.GMLua)
 	{
-		var lexedTokens = global.lexer.lex(code);
-		if(filename_ext(fileName) != "")
+		self.logmode = true
+		self.defaultFolderPath = ""
+		function lexAndParse(code,logmode = self.logmode,folderPath=defaultFolderPath,fileName="Misc")
 		{
-			fileName = filename_change_ext(fileName,".txt")
-		}
-		if(fileName != "Misc")
-		{
-			var a = file_delete(folderPath+"LexerLog_"+ fileName)
-		}
-		if(logmode)
-		{
-			var f;
-			if(fileName == "Misc")
+			var lexedTokens = global.lexer.lex(code);
+			if(filename_ext(fileName) != "")
 			{
-				f = file_text_open_append(folderPath+"LexerLog_"+ fileName);	
-				file_text_write_string(f,"-----------------------\n");
+				fileName = filename_change_ext(fileName,".txt")
 			}
-			else
+			if(fileName != "Misc")
 			{
-				f = file_text_open_write(folderPath+"LexerLog_"+ fileName);	
+				var a = file_delete(folderPath+"LexerLog_"+ fileName)
 			}
-			file_text_write_string(f,string_replace_all(string(lexedTokens),"},","}\n"));
-			file_text_close(f);
+			if(logmode)
+			{
+				var f;
+				if(fileName == "Misc")
+				{
+					f = file_text_open_append(folderPath+"LexerLog_"+ fileName);	
+					file_text_write_string(f,"-----------------------\n");
+				}
+				else
+				{
+					f = file_text_open_write(folderPath+"LexerLog_"+ fileName);	
+				}
+				file_text_write_string(f,string_replace_all(string(lexedTokens),"},","}\n"));
+				file_text_close(f);
+			}
+	
+			var abstractTree = global.parser.parseChunk(lexedTokens,folderPath,fileName);
+
+			if(fileName != "Misc")
+			{
+				file_delete(folderPath+"ParserLog_"+ fileName)
+			}
+			if(logmode)
+			{
+				var f;
+				if(fileName == "Misc")
+				{
+					f = file_text_open_append(folderPath+"ParserLog_"+ fileName);
+					file_text_write_string(f,"-----------------------\n");
+				}
+				else
+				{
+					f = file_text_open_write(folderPath+"ParserLog_"+ fileName);	
+				}
+				file_text_write_string(f,global.parser.createChunkBlock(abstractTree));
+				file_text_close(f);
+			}
+			return abstractTree;
 		}
 	
-		var abstractTree = global.parser.parseChunk(lexedTokens,folderPath,fileName);
-
-		if(fileName != "Misc")
+		runAST = function(abstractTree, scope = new Scope(), logmode = self.logmode, logFolderPath = undefined)
 		{
-			file_delete(folderPath+"ParserLog_"+ fileName)
-		}
-		if(logmode)
-		{
-			var f;
-			if(fileName == "Misc")
+			if(is_undefined(logFolderPath))
 			{
-				f = file_text_open_append(folderPath+"ParserLog_"+ fileName);
-				file_text_write_string(f,"-----------------------\n");
+				logFolderPath = (abstractTree.sourceFilePath+"InterpreterLog_");
+				var beforeDotStr = string_split((abstractTree.sourceFileName),".")[0];
+				logFolderPath += beforeDotStr + ".txt";
 			}
-			else
+			var newScope = global.interpreter.visitChunk(abstractTree,scope);
+			file_delete(logFolderPath)
+			if(logmode)
 			{
-				f = file_text_open_write(folderPath+"ParserLog_"+ fileName);	
+				var f = file_text_open_write(logFolderPath);
+				file_text_write_string(f,string(newScope));
+				file_text_close(f);
 			}
-			file_text_write_string(f,global.parser.createChunkBlock(abstractTree));
-			file_text_close(f);
+			return newScope;
 		}
-		return abstractTree;
-	}
-	
-	runAST = function(abstractTree, scope = new Scope(), logmode = self.logmode, logFolderPath = undefined)
-	{
-		if(is_undefined(logFolderPath))
-		{
-			logFolderPath = (abstractTree.sourceFilePath+"InterpreterLog_");
-			var beforeDotStr = string_split((abstractTree.sourceFileName),".")[0];
-			logFolderPath += beforeDotStr + ".txt";
-		}
-		var newScope = global.interpreter.visitChunk(abstractTree,scope);
-		file_delete(logFolderPath)
-		if(logmode)
-		{
-			var f = file_text_open_write(logFolderPath);
-			file_text_write_string(f,string(newScope));
-			file_text_close(f);
-		}
-		return newScope;
-	}
 
-	createLuaFromFile = function(filePath,logmode)
-	{
-		var file = file_text_open_read(filePath);
-		var code = "";
-		var folderPath = filename_path(filePath);
-		var fileName = filename_name(filePath);
-		while(!file_text_eof(file))
+		createLuaFromFile = function(filePath,logmode)
 		{
-			code += file_text_readln(file);
+			var file = file_text_open_read(filePath);
+			var code = "";
+			var folderPath = filename_path(filePath);
+			var fileName = filename_name(filePath);
+			while(!file_text_eof(file))
+			{
+				code += file_text_readln(file);
+			}
+			file_text_close(file);
+			return lexAndParse(code,logmode,folderPath,fileName);
 		}
-		file_text_close(file);
-		return lexAndParse(code,logmode,folderPath,fileName);
-	}
 
-	createLuaFromString = function(str,logmode)
-	{
-		return lexAndParse(str,logmode);
-	}
+		createLuaFromString = function(str,logmode)
+		{
+			return lexAndParse(str,logmode);
+		}
 	
+	}
 }
 
 function createLuaFromFile(filePath, logmode)
@@ -142,7 +145,3 @@ function setFunctionNameList(functionNameList, isWhiteList = true)
 	global.LuaLibrary.gmlFunctionNameList = functionNameList;
 	global.LuaLibrary.nameListIsWhitelist = isWhiteList
 }
-
-// This is just for the "Circles chase mouse" demo, remove the "Lua_Action_Object" and comment this out
-// at the same time. Secure management of moding structure is the end-developer's responsibilty
-setFunctionNameList([],false)

@@ -1,7 +1,9 @@
 // Script assets have changed for v2.3.0 see
 // https://help.yoyogames.com/hc/en-us/articles/360005277377 for more information
 global.interpreter = {};
-with(global.interpreter)
+function startUpGMLua_Interpreter()
+{
+	with(global.interpreter)
 {
 	//Variables that are always available
 	globalScope = new Scope(noone);
@@ -23,10 +25,10 @@ with(global.interpreter)
 		scope.associatedFilePath = chunk.sourceFilePath+chunk.sourceFileName
 		globalScope = scope;
 		
-		setGMLVariable(scope,"self",-1,true);
-		setGMLVariable(scope,"other",-2,true);
-		setGMLVariable(scope,"all",-3,true);
-		setGMLVariable(scope,"noone",-4,true);
+		setGMLVariable(scope,"self",self,true);
+		setGMLVariable(scope,"other",other,true);
+		setGMLVariable(scope,"all",all,true);
+		setGMLVariable(scope,"noone",noone,true);
 		
 
 		
@@ -1709,109 +1711,6 @@ with(global.interpreter)
 		InterpreterException("This statement should be impossible to reach, check the preceding switch statement");
 	}
 	
-	//expectedArity must be more than 0 or -1
-	//expList must be a reference or an array of references
-	//An array of references is always returned
-	function helpPruneExpList(expList,expectedArity = 1)
-	{
-
-		if(expectedArity == 1)
-		{
-			if(typeof(expList) != "array")
-			{
-				return expList;
-			}
-			else if(array_length(expList) > 0)
-			{
-				return helpPruneExpList(expList[0]);
-			}
-			else
-			{
-				return new Reference(new simpleValue(undefined));
-			}
-		}
-		
-		if(typeof(expList) != "array")
-		{
-			var retExpList = [];
-			array_push(retExpList,expList);
-			while(array_length(retExpList) < expectedArity)
-			{
-				array_push(retExpList,new Reference(new simpleValue(undefined)));
-			}
-			return retExpList;
-		}
-		
-		if(array_length(expList) == 0)
-		{
-			return expList;
-		}
-		
-		if(expectedArity == -1)
-		{
-			var retExpList = [];
-			for(var i = 0; i < array_length(expList) - 1;++i)
-			{
-				array_push(retExpList, helpPruneExpList(expList[i]));
-			}
-			var lastRef = array_last(expList);
-			if(typeof(lastRef) != "array")
-			{
-				array_push(retExpList,lastRef)
-			}
-			else
-			{
-				var lastList = helpPruneExpList(lastRef,array_length(lastRef));
-				if(typeof(lastList) == "array")
-				{
-					for(var i = 0; i < array_length(lastList); ++i)
-					{
-						array_push(retExpList,lastList[i]);
-					}
-				}
-				else
-				{
-					array_push(retExpList,lastList);
-				}
-			}
-			return retExpList;
-		}
-		
-		var retExpList = [];
-		//Deal with all expressions except for the last one. Stop a
-		//sufficient number of expressions is found.
-		//All elements here must return 1 reference
-		for(var i = 0; i < array_length(expList) - 1 && array_length(retExpList) < expectedArity;++i)
-		{
-			array_push(retExpList, helpPruneExpList(expList[i]));
-		}
-		//For the last element, prune the last value to extend the list
-		//to fit the arity
-		var remainingRequiredElements = expectedArity - array_length(retExpList);
-		var finalReferences = helpPruneExpList(array_last(expList),remainingRequiredElements);
-		if(remainingRequiredElements == 0)
-		{}
-		else if(remainingRequiredElements == 1)
-		{
-			array_push(retExpList,finalReferences);
-		}
-		else
-		{
-			for(var i = 0; i < array_length(finalReferences); ++i)
-			{
-				array_push(retExpList,finalReferences[i]);
-			}
-		}
-		//Add undefined values to fill the expression list when needed
-		//This may not be needed since finalReferences should add undefined 
-		//Values as needed
-		while(array_length(retExpList) < expectedArity)
-		{
-			array_push(retExpList,new Reference(new simpleValue(undefined)));
-		}
-		return retExpList;
-	}
-	
 	//This must return an expression
 	callMetamethod = function(op, exp1, exp2 = noone, exp3 = noone)
 	{
@@ -2049,4 +1948,5 @@ with(global.interpreter)
 		InterpreterException("This statement should be impossible to reach, check the preceding switch statement");
 	}
 	
+}
 }

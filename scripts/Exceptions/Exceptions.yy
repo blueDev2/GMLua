@@ -1,5 +1,5 @@
 {
-  "$GMScript":"",
+  "$GMScript":"v1",
   "%Name":"Exceptions",
   "isCompatibility":false,
   "isDnD":false,

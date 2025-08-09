@@ -3,7 +3,9 @@
 
 //This is a singleton as only one Lexer is needed at any time
 global.lexer = {}
-with(global.lexer)
+function startUpGMLua_Lexer()
+{
+	with(global.lexer)
 {
 	keywords = {};
 	//keywords[$"and"] = true;
@@ -406,7 +408,7 @@ with(global.lexer)
 		return false;
 	}
 }
-
+}
 function charStream(input) constructor
 {
 	self.input = input;

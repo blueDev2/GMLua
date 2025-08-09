@@ -4,7 +4,9 @@
 //This is a singleton as only one Parser is needed at any time
 //When another tokenList must be parsed, a function is provided to do so
 global.parser = {}
-with(global.parser)
+function startUpGMLua_Parser()
+{
+	with(global.parser)
 {
 	operatorPrecedence = [];
 	operatorPrecedence[11] = ["^"];
@@ -1163,6 +1165,7 @@ with(global.parser)
 		return appendString;
 	}
 	
+}
 }
 
 function TokenStream(tokens) constructor

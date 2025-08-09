@@ -1,7 +1,9 @@
 // Script assets have changed for v2.3.0 see
 // https://help.yoyogames.com/hc/en-us/articles/360005277377 for more information
 global.LuaLibrary = {}
-with(global.LuaLibrary)
+function startUpGMLua_Library()
+{
+	with(global.LuaLibrary)
 {
 	gmlFunctionNameList = [];
 	nameListIsWhitelist = true;
@@ -477,6 +479,7 @@ with(global.LuaLibrary)
 		library.addLibraryToScope(scope,libraryName)
 	}
 	
+}
 }
 	
 function addBasicLibraries(scope)

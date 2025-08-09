@@ -93,3 +93,106 @@ function Reference(container,key = undefined, checkExistance = true) constructor
 	}
 }
 
+
+//expectedArity must be more than 0 or the value -1
+//expList must be a reference or an array of references
+//An array of references is always returned
+function  helpPruneExpList(expList,expectedArity = 1)
+{
+
+	if(expectedArity == 1)
+	{
+		if(typeof(expList) != "array")
+		{
+			return expList;
+		}
+		else if(array_length(expList) > 0)
+		{
+			return helpPruneExpList(expList[0]);
+		}
+		else
+		{
+			return new Reference(new simpleValue(undefined));
+		}
+	}
+		
+	if(typeof(expList) != "array")
+	{
+		var retExpList = [];
+		array_push(retExpList,expList);
+		while(array_length(retExpList) < expectedArity)
+		{
+			array_push(retExpList,new Reference(new simpleValue(undefined)));
+		}
+		return retExpList;
+	}
+		
+	if(array_length(expList) == 0)
+	{
+		return expList;
+	}
+		
+	if(expectedArity == -1)
+	{
+		var retExpList = [];
+		for(var i = 0; i < array_length(expList) - 1;++i)
+		{
+			array_push(retExpList, helpPruneExpList(expList[i]));
+		}
+		var lastRef = array_last(expList);
+		if(typeof(lastRef) != "array")
+		{
+			array_push(retExpList,lastRef)
+		}
+		else
+		{
+			var lastList = helpPruneExpList(lastRef,array_length(lastRef));
+			if(typeof(lastList) == "array")
+			{
+				for(var i = 0; i < array_length(lastList); ++i)
+				{
+					array_push(retExpList,lastList[i]);
+				}
+			}
+			else
+			{
+				array_push(retExpList,lastList);
+			}
+		}
+		return retExpList;
+	}
+		
+	var retExpList = [];
+	//Deal with all expressions except for the last one. Stop a
+	//sufficient number of expressions is found.
+	//All elements here must return 1 reference
+	for(var i = 0; i < array_length(expList) - 1 && array_length(retExpList) < expectedArity;++i)
+	{
+		array_push(retExpList, helpPruneExpList(expList[i]));
+	}
+	//For the last element, prune the last value to extend the list
+	//to fit the arity
+	var remainingRequiredElements = expectedArity - array_length(retExpList);
+	var finalReferences = helpPruneExpList(array_last(expList),remainingRequiredElements);
+	if(remainingRequiredElements == 0)
+	{}
+	else if(remainingRequiredElements == 1)
+	{
+		array_push(retExpList,finalReferences);
+	}
+	else
+	{
+		for(var i = 0; i < array_length(finalReferences); ++i)
+		{
+			array_push(retExpList,finalReferences[i]);
+		}
+	}
+	//Add undefined values to fill the expression list when needed
+	//This may not be needed since finalReferences should add undefined 
+	//Values as needed
+	while(array_length(retExpList) < expectedArity)
+	{
+		array_push(retExpList,new Reference(new simpleValue(undefined)));
+	}
+	return retExpList;
+}

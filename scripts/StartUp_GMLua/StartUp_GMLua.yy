@@ -1,9 +1,9 @@
 {
   "$GMScript":"v1",
-  "%Name":"GMLua_Control",
+  "%Name":"StartUp_GMLua",
   "isCompatibility":false,
   "isDnD":false,
-  "name":"GMLua_Control",
+  "name":"StartUp_GMLua",
   "parent":{
     "name":"GMLua",
     "path":"folders/Scripts/GMLua.yy",

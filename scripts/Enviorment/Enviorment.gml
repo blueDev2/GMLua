@@ -764,6 +764,12 @@ function GMLToLua(gmlItem)
 	//Unless you know you will not use that table after destroying the instance
 	else if(type == "struct" || type == "ref")
 	{
+		// Non-function and non-instance handles are treated as int64 in GMLua
+		if (!variable_instance_exists(gmlItem, "object_index"))
+		{
+			return new simpleValue(int64(gmlItem));
+		}
+
 		var newTable = new Table({},gmlItem);
 		return newTable;
 	}

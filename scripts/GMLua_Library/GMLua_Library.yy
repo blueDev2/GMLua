@@ -1,5 +1,5 @@
 {
-  "$GMScript":"",
+  "$GMScript":"v1",
   "%Name":"GMLua_Library",
   "isCompatibility":false,
   "isDnD":false,

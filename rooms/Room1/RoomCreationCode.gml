@@ -1,3 +1,4 @@
+//StartUp_GMLua();
 
 var testFileLocations = [];
 
